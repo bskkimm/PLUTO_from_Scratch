@@ -19,7 +19,7 @@ def contrastive_loss(anchor, positive, negative, temperature=0.1, valid=None):
     return (loss * valid).sum() / valid.sum().clamp(min=1)
 
 
-def sdf_loss(trajectory, sdf, resolution=0.2, offsets=(-1., 0., 1.), radius=1., margin=0.):
+def sdf_loss(trajectory, sdf, resolution=0.2, offsets=(-1., 0., 1.), radius=1., margin=0., valid=None):
     """Eq. 12: average sum of hinge penalties per timestep; x right, y up.
 
     SDF is positive in safe space, shape [B,H,W], with its origin at the
@@ -36,7 +36,10 @@ def sdf_loss(trajectory, sdf, resolution=0.2, offsets=(-1., 0., 1.), radius=1., 
     gy = 2 * (-centers[..., 1] / resolution + (h - 1) / 2) / (h - 1) - 1
     grid = torch.stack((gx, gy), -1)
     distance = F.grid_sample(sdf.unsqueeze(1), grid, mode='bilinear', padding_mode='zeros', align_corners=True).squeeze(1)
-    return (radius + margin - distance).clamp(min=0).sum(-1).mean()
+    cost = (radius + margin - distance).clamp(min=0).sum(-1)
+    if valid is None:
+        return cost.mean()
+    return (cost * valid.to(cost.dtype)).sum() / valid.sum().clamp(min=1)
 
 
 def imitation_loss(out, batch):
@@ -50,7 +53,10 @@ def imitation_loss(out, batch):
     b, r, m, t, _ = traj.shape
     ref_valid = batch['reference_mask'].any(-1)
     eligible = ref_valid.any(-1) & valid.any(-1)
-    idx = batch['mode_label'].long().clamp(0, r * m - 1)
+    labels = batch['mode_label'].long()
+    if (eligible & ((labels < 0) | (labels >= r * m))).any():
+        raise ValueError('mode_label is outside the candidate range')
+    idx = labels.clamp(0, r * m - 1)
     selected_valid = ref_valid.gather(1, (idx // m).unsqueeze(1)).squeeze(1)
     if (eligible & ~selected_valid).any():
         raise ValueError('mode_label refers to a masked reference line')

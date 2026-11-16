@@ -30,3 +30,14 @@ def test_tiny_fixture_learns(tmp_path, capsys):
     run_training(tmp_path, epochs=5, seed=123)
     rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert rows[-1]['loss'] < rows[0]['loss']
+
+
+def test_cil_training_resume_matches_uninterrupted(tmp_path):
+    a, b = tmp_path / 'whole', tmp_path / 'split'
+    run_training(a, epochs=2, seed=17, cil=True)
+    run_training(b, epochs=2, seed=17, cil=True, stop_after=1)
+    run_training(b, epochs=2, seed=17, cil=True, resume=True)
+    x = torch.load(a / 'checkpoint.pt', map_location='cpu', weights_only=False)
+    y = torch.load(b / 'checkpoint.pt', map_location='cpu', weights_only=False)
+    for key in x['model']:
+        assert torch.equal(x['model'][key], y['model'][key]), key

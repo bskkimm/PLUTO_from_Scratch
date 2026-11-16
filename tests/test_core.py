@@ -84,3 +84,30 @@ def test_padded_reference_values_do_not_change_selection():
         batch['reference'][:, 1] = 10000.
         second = model(batch)['selected']
     assert torch.allclose(first, second)
+
+
+def test_scene_position_changes_valid_actor_encoding_but_not_padding():
+    torch.manual_seed(5)
+    cfg = PlutoConfig(dim=16, heads=4, encoder_layers=1, decoder_layers=1, modes=3, future_steps=4, dropout=0.)
+    model = Pluto(cfg).eval()
+    batch = sample_batch(2, 4)
+    batch['agent_pose'] = torch.zeros(2, 3, 3)
+    with torch.no_grad():
+        before = model(batch)['selected']
+        batch['agent_pose'][:, 1, 0] = 20.
+        after = model(batch)['selected']
+        assert not torch.allclose(before, after)
+        batch['agent_mask'][:, 1] = False
+        masked = model(batch)['selected']
+        batch['agent_pose'][:, 1, 0] = -100.
+        masked_changed = model(batch)['selected']
+        assert torch.allclose(masked, masked_changed)
+
+
+def test_out_of_range_mode_labels_are_rejected():
+    import pytest
+    cfg = PlutoConfig(dim=16, heads=4, encoder_layers=1, decoder_layers=1, modes=3, future_steps=4, dropout=0.)
+    batch = sample_batch(2, 4)
+    batch['mode_label'][0] = 999
+    with pytest.raises(ValueError, match='mode_label'):
+        imitation_loss(Pluto(cfg)(batch), batch)

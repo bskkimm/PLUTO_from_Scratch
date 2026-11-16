@@ -26,6 +26,11 @@
       "sha256": "a4848b46bd4350c4a86c124ecdc6594e88c80f77c56f991b34eee7a7317db981"
     },
     {
+      "id": "cil",
+      "attachment": "contrastive.svg",
+      "sha256": "bb252ff4fe8e396084d25b33ad80371db80b5ebd6984af86080146e8c48399d8"
+    },
+    {
       "id": "evaluation",
       "attachment": "inference.svg",
       "sha256": "0c71d14f22c2b024fc9f40e07f4e9cf9a53289d3911c7134d28bfb0a9012ae00"

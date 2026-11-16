@@ -1,0 +1,41 @@
+{
+  "figures": [
+    {
+      "id": "intro",
+      "attachment": "overview.svg",
+      "sha256": "2528a785c020d30f055817fb072a6e0b5acb716aace7fbaf356cead620247fb2"
+    },
+    {
+      "id": "data",
+      "attachment": "data-flow.svg",
+      "sha256": "06efd7b60079948c50177fbb155c8d94feeb935b33740fef45839f59f4989b45"
+    },
+    {
+      "id": "arch",
+      "attachment": "query-grid.svg",
+      "sha256": "b807373ddaa99eb2cd5f21a57056ebab7ab59b416a6ba29590e2dca96fc0f8f0"
+    },
+    {
+      "id": "assembly",
+      "attachment": "shapes.svg",
+      "sha256": "315b684f9e725d12f37d240120375b9e79502080015a1f4cf4bc1cc076f4ff9c"
+    },
+    {
+      "id": "objective",
+      "attachment": "loss.svg",
+      "sha256": "a4848b46bd4350c4a86c124ecdc6594e88c80f77c56f991b34eee7a7317db981"
+    },
+    {
+      "id": "evaluation",
+      "attachment": "inference.svg",
+      "sha256": "0c71d14f22c2b024fc9f40e07f4e9cf9a53289d3911c7134d28bfb0a9012ae00"
+    },
+    {
+      "id": "checkpoint",
+      "attachment": "checkpoint.svg",
+      "sha256": "39038130c13554590cde35cfb54792bd56b943b1845207226b1e7a56cd48984a"
+    }
+  ],
+  "generation": "python scripts/make_notebook.py",
+  "inspection": "Automated generation only; individual visual inspection pending."
+}

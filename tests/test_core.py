@@ -71,3 +71,16 @@ def test_zero_reference_count_uses_free_head():
     assert output['trajectory'] is None
     assert torch.equal(output['selected'], output['free'])
     assert torch.isfinite(imitation_loss(output, batch)['total'])
+
+
+def test_padded_reference_values_do_not_change_selection():
+    torch.manual_seed(9)
+    cfg = PlutoConfig(dim=16, heads=4, encoder_layers=1, decoder_layers=1, modes=3, future_steps=4, dropout=0.)
+    model = Pluto(cfg).eval()
+    batch = sample_batch(2, 4)
+    batch['reference_mask'][:, 1] = False
+    with torch.no_grad():
+        first = model(batch)['selected']
+        batch['reference'][:, 1] = 10000.
+        second = model(batch)['selected']
+    assert torch.allclose(first, second)

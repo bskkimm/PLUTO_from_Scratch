@@ -27,3 +27,5 @@ The [walkthrough](notebooks/pluto_e2e_walkthrough.ipynb) defines the model and o
 - **Reference recipe only:** 128 hidden channels, 4 encoder/decoder layers, 4 heads, 12 modes, 80 future steps; the small synthetic smoke recipe changes model size and horizon and is not a faithful training recipe.
 
 See [commands](COMMAND_GUIDE.md), [paper brief](docs/paper-brief.md), and [mapping and deviations](docs/paper-to-code.md). The paper's benchmark claims remain the authors' results; this repository has no reproduced metrics.
+
+A basic CPU GitHub Actions workflow is included, but has not run on a hosted repository and does not yet satisfy the full playbook CI and review contract.

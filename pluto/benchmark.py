@@ -1,4 +1,5 @@
 """Bounded CPU throughput measurements on the synthetic smoke fixture."""
+
 import argparse
 import json
 import platform
@@ -26,20 +27,28 @@ class SyntheticSamples(Dataset):
 
 def benchmark(iterations=10, warmup=2, batch_size=2):
     if iterations < 1 or warmup < 0 or batch_size < 1:
-        raise ValueError('iterations and batch size must be positive; warmup nonnegative')
+        raise ValueError(
+            "iterations and batch size must be positive; warmup nonnegative"
+        )
     torch.manual_seed(123)
     init = time.perf_counter()
-    loader = DataLoader(SyntheticSamples((iterations + warmup) * batch_size), batch_size=batch_size, num_workers=0)
+    loader = DataLoader(
+        SyntheticSamples((iterations + warmup) * batch_size),
+        batch_size=batch_size,
+        num_workers=0,
+    )
     cached = next(iter(loader))
-    model = Pluto(get_recipe('smoke').model)
+    model = Pluto(get_recipe("smoke").model)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     startup = time.perf_counter() - init
+
     def update(batch):
         optimizer.zero_grad()
-        loss = imitation_loss(model(batch), batch)['total']
+        loss = imitation_loss(model(batch), batch)["total"]
         loss.backward()
         optimizer.step()
         return float(loss.detach())
+
     for _ in range(warmup):
         update(cached)
     rows = {}
@@ -50,16 +59,23 @@ def benchmark(iterations=10, warmup=2, batch_size=2):
     for _ in range(iterations):
         next(iterator)
     elapsed = time.perf_counter() - start
-    rows['loader'] = {'seconds': elapsed, 'samples_per_second': iterations * batch_size / elapsed}
+    rows["loader"] = {
+        "seconds": elapsed,
+        "samples_per_second": iterations * batch_size / elapsed,
+    }
     start = time.perf_counter()
     for _ in range(iterations):
         loss = update(cached)
     elapsed = time.perf_counter() - start
-    rows['cached_step'] = {'seconds': elapsed, 'samples_per_second': iterations * batch_size / elapsed, 'last_loss': loss}
+    rows["cached_step"] = {
+        "seconds": elapsed,
+        "samples_per_second": iterations * batch_size / elapsed,
+        "last_loss": loss,
+    }
     iterator = iter(loader)
     for _ in range(warmup):
         next(iterator)
-    wait = 0.
+    wait = 0.0
     start = time.perf_counter()
     for _ in range(iterations):
         before = time.perf_counter()
@@ -67,29 +83,69 @@ def benchmark(iterations=10, warmup=2, batch_size=2):
         wait += time.perf_counter() - before
         loss = update(batch)
     elapsed = time.perf_counter() - start
-    rows['end_to_end'] = {'seconds': elapsed, 'loader_wait_seconds': wait,
-                          'samples_per_second': iterations * batch_size / elapsed, 'last_loss': loss}
+    rows["end_to_end"] = {
+        "seconds": elapsed,
+        "loader_wait_seconds": wait,
+        "samples_per_second": iterations * batch_size / elapsed,
+        "last_loss": loss,
+    }
     try:
-        revision = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip()
-        dirty = bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True, check=True).stdout.strip())
+        revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        dirty = bool(
+            subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+        )
     except (OSError, subprocess.CalledProcessError):
         revision, dirty = None, None
-    cpu_model = next((line.split(':', 1)[1].strip() for line in open('/proc/cpuinfo') if line.startswith('model name')), 'unavailable') if platform.system() == 'Linux' else platform.processor()
-    return {'device': 'cpu', 'cpu_model': cpu_model, 'code_base_revision': revision, 'code_dirty': dirty, 'dataset': 'generated synthetic samples; no disk cache', 'workers': 0,
-            'iterations': iterations, 'warmup_steps': warmup, 'batch_size': batch_size,
-            'startup_seconds': startup, 'peak_process_rss_kib_linux': resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-            'python': platform.python_version(), 'torch': torch.__version__, 'paths': rows,
-            'scope': 'CPU wall time; cached and end-to-end include loss, backward and optimizer step'}
+    cpu_model = (
+        next(
+            (
+                line.split(":", 1)[1].strip()
+                for line in open("/proc/cpuinfo")
+                if line.startswith("model name")
+            ),
+            "unavailable",
+        )
+        if platform.system() == "Linux"
+        else platform.processor()
+    )
+    return {
+        "device": "cpu",
+        "cpu_model": cpu_model,
+        "code_base_revision": revision,
+        "code_dirty": dirty,
+        "dataset": "generated synthetic samples; no disk cache",
+        "workers": 0,
+        "iterations": iterations,
+        "warmup_steps": warmup,
+        "batch_size": batch_size,
+        "startup_seconds": startup,
+        "peak_process_rss_kib_linux": resource.getrusage(
+            resource.RUSAGE_SELF
+        ).ru_maxrss,
+        "python": platform.python_version(),
+        "torch": torch.__version__,
+        "paths": rows,
+        "scope": "CPU wall time; cached and end-to-end include loss, backward and optimizer step",
+    }
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--iterations', type=int, default=10)
-    parser.add_argument('--warmup', type=int, default=2)
-    parser.add_argument('--batch-size', type=int, default=2)
+    parser.add_argument("--iterations", type=int, default=10)
+    parser.add_argument("--warmup", type=int, default=2)
+    parser.add_argument("--batch-size", type=int, default=2)
     args = parser.parse_args()
-    print(json.dumps(benchmark(args.iterations, args.warmup, args.batch_size), indent=2))
+    print(
+        json.dumps(benchmark(args.iterations, args.warmup, args.batch_size), indent=2)
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

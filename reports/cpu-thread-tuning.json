@@ -1,0 +1,31 @@
+{
+  "effective_batch_size": 2,
+  "fixture": "synthetic smoke FP32",
+  "max_seconds": 15.0,
+  "deadline_scope": "checked between trials",
+  "trials": [
+    {
+      "threads": 1,
+      "accepted": true,
+      "samples_per_second": [
+        412.5980629123954,
+        419.3901908950547
+      ],
+      "median_samples_per_second": 415.99412690372503,
+      "reason": "baseline"
+    },
+    {
+      "threads": 2,
+      "accepted": true,
+      "samples_per_second": [
+        401.4785048450684,
+        411.87198332870724
+      ],
+      "median_samples_per_second": 406.6752440868878,
+      "reason": "correct but no proven gain over selected baseline"
+    }
+  ],
+  "selected_threads": 1,
+  "selection": "baseline unless correctness and >=5% median end-to-end gain are measured",
+  "elapsed_seconds": 0.6141450469949632
+}

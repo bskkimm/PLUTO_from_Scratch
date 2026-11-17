@@ -205,3 +205,24 @@ def test_causal_views_can_use_validated_insertion_when_no_interaction():
     assert valid.tolist() == [True, False]
     assert negative["agent_mask"][0, 2].any()
     assert not negative["agent_target_mask"][0, 1].any()
+
+
+def test_insertion_uses_original_donor_when_donor_is_removed_in_its_negative_view():
+    from pluto.augmentation import make_causal_views
+
+    batch = sample_batch(2, 4)
+    batch["agent_mask"][0, 2] = False
+    batch["agent_pose"] = torch.zeros(2, 3, 3)
+    interaction = torch.tensor([[False, False, False], [False, True, False]])
+    insertion = {
+        "donor_batch": torch.tensor([1, 1]),
+        "donor_agent": torch.tensor([1, 1]),
+        "destination_slot": torch.tensor([2, -1]),
+        "poses": torch.zeros(2, 3),
+    }
+    _, negative, valid = make_causal_views(
+        batch, interaction, torch.zeros_like(interaction), insertion=insertion
+    )
+    assert valid.tolist() == [True, True]
+    assert negative["agent_mask"][0, 2].all()
+    assert not negative["agent_mask"][1, 1].any()

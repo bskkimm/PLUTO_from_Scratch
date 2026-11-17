@@ -1,6 +1,7 @@
 """Small deterministic synthetic training example; not the nuPlan recipe."""
 
 import argparse
+import hashlib
 from dataclasses import asdict
 from datetime import datetime
 import json
@@ -87,6 +88,21 @@ def run_training(
         "cil": cil,
         "tracking_uri": tracking_uri,
     }
+    implementation_files = (
+        "train.py",
+        "model.py",
+        "losses.py",
+        "objective.py",
+        "augmentation.py",
+        "synthetic.py",
+        "dataset.py",
+        "costmap.py",
+        "recipes.py",
+    )
+    implementation = {
+        name: hashlib.sha256((Path(__file__).parent / name).read_bytes()).hexdigest()
+        for name in implementation_files
+    }
     ckpt_path = out_dir / "checkpoint.pt"
     if ckpt_path.exists() and not resume:
         raise FileExistsError(
@@ -110,6 +126,8 @@ def run_training(
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
         if ckpt["config"] != config:
             raise ValueError("resume config differs from checkpoint config")
+        if ckpt.get("implementation_sha256") != implementation:
+            raise ValueError("resume implementation differs from checkpoint provenance")
         model.load_state_dict(ckpt["model"])
         optimizer.load_state_dict(ckpt["optimizer"])
         scheduler.load_state_dict(ckpt["scheduler"])
@@ -133,6 +151,7 @@ def run_training(
         "started_at": datetime.now().astimezone().isoformat(),
         "python": platform.python_version(),
         "torch": torch.__version__,
+        "implementation_sha256": implementation,
     }
     (session_dir / (uuid.uuid4().hex + ".json")).write_text(
         json.dumps(session, indent=2) + "\n"
@@ -265,6 +284,7 @@ def run_training(
         scheduler.step()
         state = {
             "model": model.state_dict(),
+            "implementation_sha256": implementation,
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
             "scaler": scaler.state_dict(),

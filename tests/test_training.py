@@ -72,3 +72,17 @@ def test_unavailable_cuda_fails_clearly(tmp_path):
     with pytest.raises(RuntimeError, match="CUDA"):
         run_training(tmp_path, epochs=1, device="cuda")
     assert not (tmp_path / "checkpoint.pt").exists()
+
+
+def test_resume_rejects_changed_implementation_provenance(tmp_path):
+    import pytest
+
+    run_training(tmp_path, epochs=2, stop_after=1)
+    checkpoint = tmp_path / "checkpoint.pt"
+    state = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    state["implementation_sha256"]["model.py"] = "0" * 64
+    torch.save(state, checkpoint)
+    previous = checkpoint.read_bytes()
+    with pytest.raises(ValueError, match="implementation"):
+        run_training(tmp_path, epochs=2, resume=True)
+    assert checkpoint.read_bytes() == previous

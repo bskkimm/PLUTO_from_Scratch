@@ -81,6 +81,7 @@ def make_causal_views(
             insertion["donor_agent"],
             slots,
             insertion["poses"],
+            donor_source=batch,
         )
         valid = valid | inserted
     if traffic_mask is not None or traffic_replacement is not None:
@@ -114,7 +115,9 @@ def make_causal_views(
     return positive, negative, valid
 
 
-def insert_agent(batch, donor_batch, donor_agent, destination_slot, poses):
+def insert_agent(
+    batch, donor_batch, donor_agent, destination_slot, poses, donor_source=None
+):
     """Insert caller-selected donor history into empty non-ego slots.
 
     `donor_batch`, `donor_agent`, and `destination_slot` are integer [B]
@@ -124,7 +127,10 @@ def insert_agent(batch, donor_batch, donor_agent, destination_slot, poses):
     placement. Inserted agent targets are masked: the copied history supplies
     no valid ground truth in the recipient scene. No mutation of input occurs.
     """
+    donor_source = batch if donor_source is None else donor_source
     history = batch["agents"]
+    if donor_source["agents"].shape != history.shape:
+        raise ValueError("donor source shape must match batch")
     b, a = history.shape[:2]
     if "agent_pose" not in batch or poses.shape != (b, 3):
         raise ValueError("agent_pose and replacement poses [B,3] are required")
@@ -152,13 +158,15 @@ def insert_agent(batch, donor_batch, donor_agent, destination_slot, poses):
     src_agent = donor_agent[rows].long()
     if batch["agent_mask"][rows, dest].any():
         raise ValueError("destination must be an empty non-ego slot")
-    if not batch["agent_mask"][src_batch, src_agent].any(dim=-1).all():
+    if not donor_source["agent_mask"][src_batch, src_agent].any(dim=-1).all():
         raise ValueError("donor must contain valid history")
     view = {key: value.clone() for key, value in batch.items()}
-    view["agents"][rows, dest] = batch["agents"][src_batch, src_agent]
-    view["agent_mask"][rows, dest] = batch["agent_mask"][src_batch, src_agent]
+    view["agents"][rows, dest] = donor_source["agents"][src_batch, src_agent]
+    view["agent_mask"][rows, dest] = donor_source["agent_mask"][src_batch, src_agent]
     view["agent_pose"][rows, dest] = poses[rows]
     if "agent_type" in batch:
-        view["agent_type"][rows, dest] = batch["agent_type"][src_batch, src_agent]
+        view["agent_type"][rows, dest] = donor_source["agent_type"][
+            src_batch, src_agent
+        ]
     view["agent_target_mask"][rows, dest - 1] = False
     return view, selected

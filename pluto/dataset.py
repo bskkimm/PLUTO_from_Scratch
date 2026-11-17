@@ -27,6 +27,9 @@ class BatchManifest:
         ):
             raise ValueError("invalid manifest format or split")
         self.split = obj["split"]
+        self.provenance = obj.get("provenance", {})
+        if not isinstance(self.provenance, dict):
+            raise ValueError("manifest provenance must be an object")
         entries = obj.get("batches")
         if not isinstance(entries, list) or not entries:
             raise ValueError("manifest must contain batches")

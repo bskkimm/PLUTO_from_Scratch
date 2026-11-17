@@ -173,7 +173,7 @@ def main():
         "seed": 123,
         "device": "cpu",
         "weights": "random",
-        "features": "ego, optional actors, and route-filtered individual lane segments"
+        "features": "ego, optional actors, and heuristically connected route references"
         if args.map
         else (
             "ego and tracked actors; no map or reference lines"
@@ -185,6 +185,10 @@ def main():
         "map_sha256": map_sha,
         "map_count": batch["map"].shape[1],
         "reference_count": batch["reference"].shape[1],
+        "reference_lengths_m": batch["reference"][0, :, :, 2:4]
+        .norm(dim=-1)
+        .sum(dim=-1)
+        .tolist(),
         "on_route_map_count": int(batch["on_route"].sum()) if args.map else None,
         "actor_count": batch["agents"].shape[1] - 1,
         "static_count": batch["static"].shape[1],
@@ -194,7 +198,7 @@ def main():
         else None,
         "finite_output": bool(torch.isfinite(output["selected"]).all()),
         "optimization_step": step_result,
-        "limitation": "read-only data integration diagnostic with optional one-step update; individual map references are not connected official paths; not full training, official nuPlan evaluation, or planning-quality evidence",
+        "limitation": "read-only data integration diagnostic with optional one-step update; reference paths use heuristic lane connectivity, not the official reference builder; not full training, official nuPlan evaluation, or planning-quality evidence",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")

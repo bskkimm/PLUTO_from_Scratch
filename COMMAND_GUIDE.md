@@ -26,8 +26,18 @@ MLflow is optional; `python -m pip install '.[tracking]'` installs it when autho
 
 `--accumulate N` groups up to N consecutive microbatches per optimizer update; the final group may be smaller and is weighted by sample count. Because losses average over valid labels and the model uses stochastic layers, this does not guarantee equivalence to a single concatenated batch. The learning-rate schedule advances per epoch. Progress uses the current session to estimate remaining work; saved total active time is approximate because work after the checkpoint snapshot is not included across restarts.
 
-The optional nuPlan SQLite probe opens the database read-only, samples a single window, and can include tracked actors and nearby map features with route-filtered individual lane segments. Install the `nuplan-map` extra for map probing. Its optional one-step optimization uses random model weights; these probes are not official feature-builder parity, full training, closed-loop evaluation, or planning-quality evidence.
+The optional nuPlan SQLite probe opens the database read-only, samples a single window, and can include tracked actors and nearby map features with heuristically connected route-filtered lane segments. Install the `nuplan-map` extra for map probing. Its optional one-step optimization uses random model weights; these probes are not official feature-builder parity, full training, closed-loop evaluation, or planning-quality evidence.
 
 Training defaults to `--device cpu --precision fp32`. `--precision bf16` is available on CPU or supported CUDA devices, and `--precision fp16` requires CUDA; checkpoints include scaler state and CUDA random states. CPU BF16 resume is tested on the synthetic fixture; CUDA, real-data precision and GPU memory behavior are unverified. Resume requires the same device and precision configuration.
 
 For `--build-sdf`, install the `science` extra and supply boolean `[B,H,W]` tensors named `drivable_mask` and `obstacle_mask` instead of `sdf` in each prepared batch. Distances use 0.2 m/pixel and cell-center Euclidean distance; rasterization and causal validity remain the caller’s responsibility.
+
+To prepare one local diagnostic window with route-filtered, heuristically connected references (requires `nuplan-map` extra):
+
+```sh
+python -m pluto.prepare --log /path/to/log.db --map /path/to/map.gpkg --timestamp MICROSECONDS --out runs/prepared --split mini-diagnostic --modes 6
+python -m pluto.train --manifest runs/prepared/manifest.json --recipe practical --epochs 4 --stop-after 1 --out runs/one-step
+python -m pluto.evaluate runs/one-step/checkpoint.pt --manifest runs/prepared/manifest.json
+```
+
+This example intentionally performs one update on one window. Its evaluation uses that same window and is only an integration diagnostic. Prepared `--modes` must match the chosen recipe; preparation and data storage are explicit opt-ins.

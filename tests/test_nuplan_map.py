@@ -24,7 +24,7 @@ def test_map_probe_projects_lane_and_constructs_boundary_features(tmp_path):
         "create table lanes_polygons (fid integer, left_boundary_fid integer, right_boundary_fid integer, speed_limit_mps real, lane_group_fid integer)"
     )
     c.execute(
-        "create table lane_connectors (fid integer, speed_limit_mps real, lane_group_connector_fid integer)"
+        "create table lane_connectors (fid integer, speed_limit_mps real, lane_group_connector_fid integer, exit_lane_fid integer, entry_lane_fid integer)"
     )
     c.execute("create table boundaries (fid integer, geom blob)")
     east, north = 365845.0, 143242.0
@@ -74,7 +74,7 @@ def test_map_probe_projects_lane_and_constructs_boundary_features(tmp_path):
     assert torch.equal(result["reference"], later["reference"])
     assert torch.equal(result["map"], later["map"])
     c = sqlite3.connect(path)
-    c.execute("insert into lane_connectors values (1, 8., 99)")
+    c.execute("insert into lane_connectors values (1, 8., 99, null, null)")
     c.execute("update baseline_paths set lane_fid=null, lane_connector_fid=1")
     c.commit()
     c.close()
@@ -164,3 +164,58 @@ def test_route_context_uses_latest_nonfuture_lidar_status(tmp_path):
     route, traffic = read_route_context(path, 300000)
     assert route == [99, 100]
     assert traffic == {7: 0}
+
+
+def test_connected_reference_follows_lane_connector_and_route():
+    from pluto.nuplan_map import LaneSegment, connected_reference_paths
+
+    segments = [
+        LaneSegment(("lane", 1), 10, LineString([(0.0, 0.0), (5.0, 0.0)])),
+        LaneSegment(
+            ("connector", 2),
+            11,
+            LineString([(5.0, 0.0), (6.0, 0.0)]),
+            source_lane=1,
+            target_lane=3,
+        ),
+        LaneSegment(("lane", 3), 12, LineString([(6.0, 0.0), (12.0, 0.0)])),
+    ]
+    paths = connected_reference_paths(
+        segments, (1.0, 0.0, 0.0), route_ids=[10, 11, 12], max_references=1
+    )
+    assert len(paths) == 1
+    assert paths[0].length == pytest.approx(11.0)
+    assert paths[0].coords[0] == pytest.approx((1.0, 0.0))
+    assert paths[0].coords[-1] == pytest.approx((12.0, 0.0))
+
+
+def test_connected_reference_avoids_opposing_lanes_and_route_jumps():
+    from pluto.nuplan_map import LaneSegment, connected_reference_paths
+
+    segments = [
+        LaneSegment(("lane", 1), 10, LineString([(5.0, 0.0), (0.0, 0.0)])),
+        LaneSegment(("lane", 2), 30, LineString([(0.0, 1.0), (5.0, 1.0)])),
+    ]
+    assert not connected_reference_paths(
+        segments, (1.0, 0.0, 0.0), route_ids=[10, 20], max_references=2
+    )
+
+
+def test_connected_paths_do_not_skip_a_route_roadblock():
+    from pluto.nuplan_map import LaneSegment, connected_reference_paths
+
+    segments = [
+        LaneSegment(("lane", 1), 10, LineString([(0.0, 0.0), (5.0, 0.0)])),
+        LaneSegment(
+            ("connector", 2),
+            30,
+            LineString([(5.0, 0.0), (6.0, 0.0)]),
+            source_lane=1,
+            target_lane=3,
+        ),
+        LaneSegment(("lane", 3), 30, LineString([(6.0, 0.0), (12.0, 0.0)])),
+    ]
+    path = connected_reference_paths(
+        segments, (1.0, 0.0, 0.0), route_ids=[10, 20, 30], max_references=1
+    )[0]
+    assert path.coords[-1] == pytest.approx((5.0, 0.0))

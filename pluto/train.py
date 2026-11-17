@@ -54,6 +54,17 @@ def run_training(
     settings = get_recipe(recipe)
     cfg = settings.model
     data = BatchManifest(manifest) if manifest is not None else None
+    if (
+        data is not None
+        and data.provenance.get("kind") == "nuplan-heuristic-single-window-v1"
+    ):
+        if data.provenance.get("modes") != cfg.modes:
+            raise ValueError("prepared mode count differs from the chosen recipe")
+        if (
+            data.provenance.get("future_samples") is not None
+            and data.provenance["future_samples"] != cfg.future_steps
+        ):
+            raise ValueError("prepared future horizon differs from the chosen recipe")
     dataset_id = (
         {"manifest_sha256": data.identity, "split": data.split}
         if data

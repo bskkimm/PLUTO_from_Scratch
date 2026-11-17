@@ -1,9 +1,112 @@
 """Read nearby nuPlan GeoPackage lanes into a heuristic local vector map."""
 
+from dataclasses import dataclass
+import math
 from pathlib import Path
 import sqlite3
 import torch
 from .losses import assign_modes
+
+
+@dataclass(frozen=True)
+class LaneSegment:
+    """A route graph node expressed in projected world coordinates."""
+
+    key: tuple
+    roadblock: int
+    line: object
+    source_lane: int = None
+    target_lane: int = None
+
+
+def connected_reference_paths(
+    segments, ego_pose, route_ids, max_references=6, max_length=120.0, max_gap=5.0
+):
+    """Stitch route-filtered lane/connector baselines in their directed order.
+
+    This bounded heuristic uses connector exit→entry lane topology and clips
+    the first segment at the ego projection. It is not the official scenario
+    manager's route correction or reference-line algorithm.
+    """
+    from shapely.geometry import LineString, Point
+    from shapely.ops import substring
+
+    if max_references < 0 or max_length <= 0 or max_gap < 0:
+        raise ValueError("invalid path limits")
+    if not route_ids or max_references == 0:
+        return []
+    positions = {int(value): i for i, value in enumerate(route_ids)}
+    nodes = {item.key: item for item in segments if item.roadblock in positions}
+    adjacency = {key: [] for key in nodes}
+    for key, item in nodes.items():
+        if key[0] != "connector":
+            continue
+        source, target = ("lane", item.source_lane), ("lane", item.target_lane)
+        if source in nodes:
+            adjacency[source].append(key)
+        if target in nodes:
+            adjacency[key].append(target)
+    for key in adjacency:
+        adjacency[key].sort()
+    origin = Point(ego_pose[0], ego_pose[1])
+    starts = sorted(
+        nodes.values(), key=lambda item: (item.line.distance(origin), item.key)
+    )
+    paths, signatures = [], set()
+
+    def collect(key, coords, visited):
+        if len(paths) >= max_references:
+            return
+        item = nodes[key]
+        options = []
+        for nxt in adjacency[key]:
+            if nxt in visited:
+                continue
+            next_item = nodes[nxt]
+            difference = positions[next_item.roadblock] - positions[item.roadblock]
+            if difference not in (0, 1):
+                continue
+            next_coords = list(next_item.line.coords)
+            if Point(coords[-1]).distance(Point(next_coords[0])) > max_gap:
+                continue
+            options.append((nxt, next_coords))
+        if not options or LineString(coords).length >= max_length or len(visited) >= 32:
+            line = LineString(coords)
+            if line.length > max_length:
+                line = substring(line, 0.0, max_length)
+            if line.length > 0.01:
+                signature = tuple(
+                    (
+                        round(line.interpolate(q, normalized=True).x, 1),
+                        round(line.interpolate(q, normalized=True).y, 1),
+                    )
+                    for q in (0.0, 0.5, 1.0)
+                )
+                if signature not in signatures:
+                    signatures.add(signature)
+                    paths.append(line)
+            return
+        for nxt, next_coords in options:
+            collect(nxt, coords + next_coords, visited | {nxt})
+            if len(paths) >= max_references:
+                break
+
+    for item in starts:
+        offset = item.line.project(origin)
+        before = item.line.interpolate(max(0.0, offset - 0.25))
+        after = item.line.interpolate(min(item.line.length, offset + 0.25))
+        dot = (after.x - before.x) * math.cos(ego_pose[2]) + (
+            after.y - before.y
+        ) * math.sin(ego_pose[2])
+        if dot <= 0:
+            continue
+        cropped = substring(item.line, offset, item.line.length)
+        if cropped.geom_type != "LineString" or cropped.length < 0.01:
+            continue
+        collect(item.key, list(cropped.coords), {item.key})
+        if len(paths) >= max_references:
+            break
+    return paths
 
 
 def _geometry(blob):
@@ -38,8 +141,8 @@ def add_map_features(
     describes the world coordinates. GeoPackage geometry is assumed WGS84.
     Boundaries missing from the map become zero offsets; speed/traffic fields
     are conservative unknowns when unavailable. Supplied route IDs filter
-    reference candidates; individual baselines are not connected into the
-    official reference paths. No matching route produces no references.
+    reference candidates and use a bounded connectivity heuristic. This is
+    not the official reference-path builder. No matching route gives no references.
     """
     if (
         radius <= 0
@@ -70,7 +173,8 @@ def add_map_features(
             """
             SELECT b.fid,b.geom,b.lane_fid,b.lane_connector_fid,
                    left_b.geom,right_b.geom,COALESCE(l.speed_limit_mps,c.speed_limit_mps),
-                   COALESCE(l.lane_group_fid,c.lane_group_connector_fid)
+                   COALESCE(l.lane_group_fid,c.lane_group_connector_fid),
+                   c.exit_lane_fid,c.entry_lane_fid
             FROM baseline_paths b JOIN rtree_baseline_paths_geom r ON b.fid=r.id
             LEFT JOIN lanes_polygons l ON b.lane_fid=l.fid
             LEFT JOIN lane_connectors c ON b.lane_connector_fid=c.fid
@@ -91,7 +195,18 @@ def add_map_features(
         return line if line.length > 0.01 else None
 
     nearby = []
-    for fid, blob, lane_id, connector_id, left, right, speed, roadblock_id in rows:
+    for (
+        fid,
+        blob,
+        lane_id,
+        connector_id,
+        left,
+        right,
+        speed,
+        roadblock_id,
+        source_lane,
+        target_lane,
+    ) in rows:
         center = project(blob)
         if center is None or center.distance(Point(east, north)) > radius:
             continue
@@ -110,6 +225,8 @@ def add_map_features(
                 right_line,
                 speed,
                 roadblock_id,
+                source_lane,
+                target_lane,
             )
         )
     nearby.sort(key=lambda item: (item[0], item[1]))
@@ -158,7 +275,22 @@ def add_map_features(
     )
     route_set = None if route_ids is None else set(route_ids)
     traffic_states = traffic_states or {}
-    for _, _, line, lane_id, connector_id, left, right, speed, roadblock_id in nearby:
+    segments = []
+    for (
+        _,
+        _,
+        line,
+        lane_id,
+        connector_id,
+        left,
+        right,
+        speed,
+        roadblock_id,
+        source_lane,
+        target_lane,
+    ) in nearby:
+        key = ("lane", lane_id) if lane_id is not None else ("connector", connector_id)
+        segments.append(LaneSegment(key, roadblock_id, line, source_lane, target_lane))
         center = sample(line)
         vector = center[1:] - center[:-1]
         yaw = torch.atan2(vector[:, 1], vector[:, 0])
@@ -210,11 +342,34 @@ def add_map_features(
             raise ValueError("traffic state must be 0–3")
         lights.append(status)
     n = len(maps)
-    reference_indices = (
-        [i for i in range(n) if on_route[i]]
-        if route_set is not None
-        else list(range(n))
-    )[:max_references]
+    if route_set is not None:
+        reference_lines = connected_reference_paths(
+            segments,
+            ego_pose,
+            route_ids,
+            max_references=max_references,
+            max_length=radius,
+        )
+        refs, ref_poses, raw_refs = [], [], []
+        for line in reference_lines:
+            center = sample(line)
+            vector = center[1:] - center[:-1]
+            yaw = torch.atan2(vector[:, 1], vector[:, 0])
+            refs.append(
+                torch.cat(
+                    (
+                        center[:-1] - center[0],
+                        vector,
+                        torch.stack((yaw.cos(), yaw.sin()), -1),
+                    ),
+                    -1,
+                )
+            )
+            ref_poses.append(torch.cat((center[0], yaw[:1])))
+            raw_refs.append(center[:-1])
+        reference_indices = list(range(len(refs)))
+    else:
+        reference_indices = list(range(min(len(refs), max_references)))
     r = len(reference_indices)
     out = {key: value.clone() for key, value in batch.items()}
     out["map"] = torch.stack(maps)[None] if n else torch.zeros(1, 0, points, 10)

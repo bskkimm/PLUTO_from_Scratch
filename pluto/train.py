@@ -14,9 +14,8 @@ import torch
 from .model import Pluto
 from .recipes import get_recipe, make_scheduler
 from .dataset import BatchManifest
-from .losses import imitation_loss
 from .augmentation import make_causal_views, mask_agents, perturb_state
-from .objective import contrastive_objective
+from .objective import contrastive_objective, supervised_objective
 from .progress import estimate_progress
 from .synthetic import sample_batch
 from .tracking import Tracker
@@ -33,7 +32,19 @@ def run_training(
     tracking_uri=None,
     recipe="smoke",
     accumulation_steps=1,
+    device="cpu",
+    precision="fp32",
 ):
+    if device not in ("cpu", "cuda"):
+        raise ValueError("device must be cpu or cuda")
+    if precision not in ("fp32", "bf16", "fp16"):
+        raise ValueError("precision must be fp32, bf16, or fp16")
+    if device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA requested but unavailable")
+    if device == "cpu" and precision == "fp16":
+        raise ValueError("fp16 training requires CUDA")
+    if device == "cuda" and precision == "bf16" and not torch.cuda.is_bf16_supported():
+        raise RuntimeError("CUDA bfloat16 is not supported by this device")
     if accumulation_steps < 1:
         raise ValueError("accumulation_steps must be positive")
     out_dir = Path(out_dir)
@@ -57,6 +68,8 @@ def run_training(
         "warmup_epochs": settings.warmup_epochs,
         "recipe": recipe,
         "accumulation_steps": accumulation_steps,
+        "device": device,
+        "precision": precision,
         "cil": cil,
         "tracking_uri": tracking_uri,
     }
@@ -66,7 +79,10 @@ def run_training(
             "checkpoint exists; use --resume or a new output directory"
         )
     torch.manual_seed(seed)
-    model = Pluto(cfg)
+    model = Pluto(cfg).to(device)
+    scaler = torch.amp.GradScaler(
+        "cuda", enabled=(device == "cuda" and precision == "fp16")
+    )
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=config["lr"], weight_decay=config["weight_decay"]
     )
@@ -83,7 +99,10 @@ def run_training(
         model.load_state_dict(ckpt["model"])
         optimizer.load_state_dict(ckpt["optimizer"])
         scheduler.load_state_dict(ckpt["scheduler"])
+        scaler.load_state_dict(ckpt["scaler"])
         torch.set_rng_state(ckpt["rng"])
+        if device == "cuda":
+            torch.cuda.set_rng_state_all(ckpt["cuda_rng"])
         start = ckpt["epoch"]
         run_id = ckpt.get("run_id")
         first_started = datetime.fromisoformat(ckpt["first_started"])
@@ -131,58 +150,69 @@ def run_training(
                 raise ValueError("empty accumulation group")
             optimizer.zero_grad()
             for batch in group:
+                batch = {key: value.to(device) for key, value in batch.items()}
                 if batch["target"].shape[1] != cfg.future_steps:
                     raise ValueError(
                         "batch target horizon differs from the chosen recipe"
                     )
-                if cil:
-                    if data is None:
-                        positive = perturb_state(
-                            batch, torch.randn_like(batch["ego_state"]) * 0.05
-                        )
-                        drop = torch.zeros_like(batch["agent_mask"][..., 0])
-                        drop[:, -1] = True
-                        negative = mask_agents(batch, drop)
-                        contrast_valid = (
-                            None  # Toy views, not validated causal nuPlan augmentation.
+                amp_dtype = torch.bfloat16 if precision == "bf16" else torch.float16
+                with torch.amp.autocast(
+                    device_type=device, dtype=amp_dtype, enabled=precision != "fp32"
+                ):
+                    if cil:
+                        if data is None:
+                            positive = perturb_state(
+                                batch, torch.randn_like(batch["ego_state"]) * 0.05
+                            )
+                            drop = torch.zeros_like(batch["agent_mask"][..., 0])
+                            drop[:, -1] = True
+                            negative = mask_agents(batch, drop)
+                            contrast_valid = None  # Toy views, not validated causal nuPlan augmentation.
+                        else:
+                            if "interactive" not in batch or "leading" not in batch:
+                                raise ValueError(
+                                    "manifest CIL requires interactive and leading masks"
+                                )
+                            positive, negative, contrast_valid = make_causal_views(
+                                batch,
+                                batch["interactive"],
+                                batch["leading"],
+                                batch.get("traffic_mask"),
+                                batch.get("traffic_replacement"),
+                            )
+                        components = contrastive_objective(
+                            model,
+                            batch,
+                            positive,
+                            negative,
+                            sdf=batch.get("sdf"),
+                            contrast_valid=contrast_valid,
                         )
                     else:
-                        if "interactive" not in batch or "leading" not in batch:
-                            raise ValueError(
-                                "manifest CIL requires interactive and leading masks"
-                            )
-                        positive, negative, contrast_valid = make_causal_views(
-                            batch,
-                            batch["interactive"],
-                            batch["leading"],
-                            batch.get("traffic_mask"),
-                            batch.get("traffic_replacement"),
+                        components = supervised_objective(
+                            model(batch), batch, sdf=batch.get("sdf")
                         )
-                    components = contrastive_objective(
-                        model,
-                        batch,
-                        positive,
-                        negative,
-                        sdf=batch.get("sdf"),
-                        contrast_valid=contrast_valid,
-                    )
-                else:
-                    components = imitation_loss(model(batch), batch)
                 loss = components["total"]
                 if not torch.isfinite(loss):
                     raise RuntimeError("non-finite loss")
-                (loss * (batch["target"].shape[0] / group_examples)).backward()
+                scaler.scale(
+                    loss * (batch["target"].shape[0] / group_examples)
+                ).backward()
                 epoch_losses.append(loss.item())
                 for name, value in components.items():
                     if name != "total":
                         component_totals[name] = (
                             component_totals.get(name, 0.0) + value.detach().item()
                         )
+            scaler.unscale_(optimizer)
             gradient_norms.append(
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0).item()
             )
-            optimizer.step()
-            optimizer_steps += 1
+            old_scale = scaler.get_scale()
+            scaler.step(optimizer)
+            scaler.update()
+            if scaler.get_scale() >= old_scale:
+                optimizer_steps += 1
         component_totals["gradient_norm"] = (
             sum(gradient_norms) / len(gradient_norms) * len(epoch_losses)
         )
@@ -191,6 +221,8 @@ def run_training(
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
+            "scaler": scaler.state_dict(),
+            "cuda_rng": torch.cuda.get_rng_state_all() if device == "cuda" else None,
             "rng": torch.get_rng_state(),
             "epoch": epoch + 1,
             "optimizer_steps": optimizer_steps,
@@ -242,6 +274,8 @@ def main():
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
+    parser.add_argument("--precision", choices=["fp32", "bf16", "fp16"], default="fp32")
     parser.add_argument(
         "--accumulate", type=int, default=1, help="microbatches per optimizer update"
     )
@@ -273,6 +307,8 @@ def main():
         args.mlflow_uri,
         args.recipe,
         args.accumulate,
+        args.device,
+        args.precision,
     )
 
 

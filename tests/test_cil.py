@@ -126,3 +126,29 @@ def test_causal_views_invert_only_explicitly_supplied_lights():
     assert valid.tolist() == [True, False]
     assert neg["traffic_light"].tolist() == [[2, 1, 2], [1, 1, 2]]
     assert batch["traffic_light"][0, 0] == 1
+
+
+def test_noncontrastive_training_can_include_sdf_auxiliary():
+    from pluto.objective import supervised_objective
+
+    torch.manual_seed(23)
+    config = PlutoConfig(
+        dim=16,
+        heads=4,
+        encoder_layers=1,
+        decoder_layers=1,
+        modes=3,
+        future_steps=4,
+        dropout=0.0,
+    )
+    model = Pluto(config).eval()
+    batch = sample_batch(2, 4)
+    output = model(batch)
+    without = supervised_objective(output, batch)
+    with_sdf = supervised_objective(
+        output, batch, sdf=torch.zeros(2, 11, 11), resolution=1.0
+    )
+    assert with_sdf["auxiliary"] > 0
+    assert with_sdf["total"] > without["total"]
+    with_sdf["total"].backward()
+    assert torch.isfinite(model.trajectory_head[0].weight.grad).all()

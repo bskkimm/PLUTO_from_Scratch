@@ -10,7 +10,68 @@ ASSETS = ROOT / "notebooks/assets/architecture"
 ASSETS.mkdir(parents=True, exist_ok=True)
 
 
+def overview_svg():
+    """Editable pipeline figure with explicit inference and supervision paths."""
+    boxes = [
+        (25, 82, 210, 68, "SCENE INPUT", "agents · map · static", "#d6e8f7"),
+        (275, 82, 220, 68, "SCENE ENCODER", "masked tokens [B,N,D]", "#dcefe4"),
+        (865, 82, 235, 68, "AGENT FORECAST", "one future per agent", "#f9e9ce"),
+        (25, 235, 210, 68, "REFERENCE LINES", "valid polylines [B,R,P]", "#d6e8f7"),
+        (275, 235, 220, 68, "QUERY GRID", "R lines × M learned modes", "#dcefe4"),
+        (550, 235, 230, 68, "FACTORIZED DECODER", "lateral → speed → scene", "#dcefe4"),
+        (865, 235, 235, 68, "PROPOSALS + SCORES", "[B,R,M,T,6] and [B,R,M]", "#f9e9ce"),
+        (865, 340, 235, 68, "SELECT / FALLBACK", "rule scores or free head", "#f9e9ce"),
+        (25, 420, 210, 68, "TRAINING TARGETS", "future · masks · SDF", "#f5dce0"),
+        (550, 420, 230, 68, "TRAINING OBJECTIVE", "imitation + aux + CIL", "#f5dce0"),
+    ]
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="535" viewBox="0 0 1140 535">',
+        '<rect width="100%" height="100%" fill="#f5f8fc"/>',
+        '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#465d76"/></marker></defs>',
+        '<text x="25" y="43" font-family="sans-serif" font-size="25" font-weight="bold" fill="#18263d">PLUTO: vector scene → candidate plans → selection</text>',
+        '<text x="25" y="517" font-family="sans-serif" font-size="15" fill="#465d76">Solid arrows: forward data flow · dashed arrow: training gradient · D=128, M=12, T=80 in the paper</text>',
+    ]
+    for x, y, width, height, heading, detail, fill in boxes:
+        parts.append(
+            f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="9" fill="{fill}" stroke="#465d76"/>'
+        )
+        parts.append(
+            f'<text x="{x + 12}" y="{y + 26}" font-family="sans-serif" font-weight="bold" font-size="15" fill="#18263d">{escape(heading)}</text>'
+        )
+        parts.append(
+            f'<text x="{x + 12}" y="{y + 50}" font-family="sans-serif" font-size="14" fill="#18263d">{escape(detail)}</text>'
+        )
+    for path in [
+        "M235 116 H275",
+        "M495 116 H865",
+        "M235 269 H275",
+        "M495 269 H550",
+        "M385 150 V188 H665 V235",
+        "M780 269 H865",
+        "M980 303 V340",
+        "M235 454 H550",
+        "M1100 116 H1120 V454 H780",
+        "M1100 269 H1120",
+        "M495 116 H805 V374 H865",
+    ]:
+        parts.append(
+            f'<path d="{path}" fill="none" stroke="#465d76" stroke-width="2" marker-end="url(#arrow)"/>'
+        )
+    parts.append(
+        '<text x="788" y="360" font-family="sans-serif" font-size="13" fill="#465d76">free head</text>'
+    )
+    parts.append(
+        '<path d="M550 440 H520 V303 H550" fill="none" stroke="#a54e5a" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow)"/>'
+    )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
 def figure(fid, title, rows):
+    if fid == "overview":
+        content = overview_svg()
+        (ASSETS / f"{fid}.svg").write_text(content)
+        return content
     width, height = 1100, 110 + 86 * len(rows)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
@@ -191,7 +252,7 @@ code(
     "cil-step",
 )
 md(
-    "## Inference and evaluation\n\nLearned logits select a candidate. The paper additionally uses simulation-based scoring, which is absent here. This average displacement error (ADE) is a synthetic open-loop diagnostic, not a nuPlan score.\n",
+    "## Inference and evaluation\n\nLearned logits select a candidate. The paper additionally uses an official simulation-based scoring system, which is not replicated here. This average displacement error (ADE) is a synthetic open-loop diagnostic, not a nuPlan score.\n",
     "evaluation",
     "inference",
     "Synthetic inference",
@@ -203,6 +264,24 @@ md(
 code(
     "model.eval()\nwith torch.no_grad():\n    pred = model(batch)['selected']\n    ade = (pred[..., :2] - batch['target'][..., :2]).norm(dim=-1).mean()\nprint('synthetic ADE (m):', float(ade))\n",
     "metric",
+)
+md(
+    "## Bicycle rollout and tracking\n\nThe reference plan is tracked with a finite-horizon linear-quadratic controller and a kinematic bicycle. The 0.1-second, straight-line example is analytically checkable. This illustrative tracker has not been compared with the nuPlan/PDM implementation or official safety rules.\n",
+    "simulation",
+    "bicycle",
+    "Straight reference and bicycle rollout",
+    [
+        ("Initial x=0 m, v=1 m/s", "Bicycle step dt=0.1 s", "Next x=0.1 m"),
+        ("Future reference states", "Backward LQR gains", "Forward tracked states"),
+    ],
+)
+simulation_source = (
+    (ROOT / "pluto/simulation.py").read_text().replace("import torch\n", "")
+)
+code(simulation_source, "simulation-definitions")
+code(
+    "initial = torch.tensor([[0., 0., 0., 1.]])\nreference = torch.zeros(1, 1, 4, 6)\nreference[0, 0, :, 0] = torch.arange(1., 5.) * 0.1\nreference[..., 2] = 1.\nreference[..., 4] = 1.\nrollout = lqr_rollout(initial, reference)\nprint('tracked x (m):', rollout[0, 0, :, 0])\n",
+    "simulation-probe",
 )
 md(
     "## Checkpoint workflow\n\nThe separate `pluto.train` module implements an epoch-boundary synthetic checkpoint containing model, optimizer, scheduler, RNG state and config. Exact resume is only tested for CPU single-process synthetic data. Optional local MLflow tracking is implemented; raw nuPlan integration and full hosted CI remain future work.\n",
@@ -232,6 +311,7 @@ manifest = {
             "pluto/model.py",
             "pluto/losses.py",
             "pluto/objective.py",
+            "pluto/simulation.py",
             "pluto/synthetic.py",
             "scripts/make_notebook.py",
         ]
@@ -241,7 +321,7 @@ manifest = {
 }
 (ASSETS / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 (ASSETS / "README.md").write_text(
-    "# Figure inventory\n\nNine editable SVG illustrations are embedded as notebook attachments. The manifest identifies their cell anchors and hashes. They are schematic, not a substitute for pending detailed, visually inspected worked figures. Regenerate with `python scripts/make_notebook.py`.\n"
+    "# Figure inventory\n\nTen editable SVG illustrations are embedded as notebook attachments. The manifest identifies their cell anchors and hashes. They are schematic, not a substitute for pending detailed, visually inspected worked figures. Regenerate with `python scripts/make_notebook.py`.\n"
 )
 nb = {
     "cells": cells,

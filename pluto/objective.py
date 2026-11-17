@@ -20,6 +20,16 @@ def _supervised_trajectory(out, batch):
     return chosen, valid & eligible[:, None]
 
 
+def supervised_objective(out, batch, sdf=None, resolution=0.2):
+    """Imitation, agent prediction, and an optional labeled-plan SDF penalty."""
+    losses = imitation_loss(out, batch)
+    auxiliary = losses["total"] * 0
+    if sdf is not None:
+        trajectory, valid = _supervised_trajectory(out, batch)
+        auxiliary = sdf_loss(trajectory, sdf, resolution=resolution, valid=valid)
+    return {**losses, "auxiliary": auxiliary, "total": losses["total"] + auxiliary}
+
+
 def contrastive_objective(
     model,
     original,

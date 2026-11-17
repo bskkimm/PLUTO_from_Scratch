@@ -1,32 +1,32 @@
 {
   "device": "cpu",
   "cpu_model": "Intel(R) Core(TM) i9-14900K",
-  "code_base_revision": "e0d8aeae55deb9f8d9fb56c1c6337a8333085f4b",
+  "code_base_revision": "c6d3612f3f53cfca4d746dd139847b926e851ecc",
   "code_dirty": true,
   "dataset": "generated synthetic samples; no disk cache",
   "workers": 0,
-  "iterations": 5,
-  "warmup_steps": 2,
+  "iterations": 8,
+  "warmup_steps": 3,
   "batch_size": 2,
-  "startup_seconds": 0.32316978599556023,
-  "peak_process_rss_kib_linux": 614652,
+  "startup_seconds": 0.32622057299886364,
+  "peak_process_rss_kib_linux": 627084,
   "python": "3.11.14",
   "torch": "2.9.1+cu130",
   "paths": {
     "loader": {
-      "seconds": 0.0005472179982461967,
-      "samples_per_second": 18274.252733004847
+      "seconds": 0.0008310029952554032,
+      "samples_per_second": 19253.841552138456
     },
     "cached_step": {
-      "seconds": 0.023525261000031605,
-      "samples_per_second": 425.07498641509505,
-      "last_loss": 2.0467326641082764
+      "seconds": 0.07209538699680706,
+      "samples_per_second": 221.92820742759315,
+      "last_loss": 1.9024150371551514
     },
     "end_to_end": {
-      "seconds": 0.02402919699670747,
-      "loader_wait_seconds": 0.0007594160124426708,
-      "samples_per_second": 416.16039026898073,
-      "last_loss": 1.935725212097168
+      "seconds": 0.07251987100607948,
+      "loader_wait_seconds": 0.0014291909901658073,
+      "samples_per_second": 220.62918449839339,
+      "last_loss": 1.909456491470337
     }
   },
   "scope": "CPU wall time; cached and end-to-end include loss, backward and optimizer step"

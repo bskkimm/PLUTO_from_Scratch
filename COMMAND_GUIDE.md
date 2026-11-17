@@ -14,6 +14,7 @@ python -m pluto.evaluate runs/demo/checkpoint.pt
 python -m pluto.train --out runs/cil --epochs 3 --cil
 python -m pluto.train --out runs/tracked --epochs 3 --mlflow-uri sqlite:///runs/mlflow.db
 python -m pluto.benchmark --iterations 5 --warmup 2
+python scripts/probe_nuplan_ego.py /path/to/nuplan-log.db --output runs/ego-probe.json
 python -m pluto.tune --output runs/tuning.json --threads 1 2 --iterations 4 --warmup 2 --repeats 2 --max-seconds 15
 ```
 
@@ -22,3 +23,7 @@ For prepared data, use `--manifest path/to/train.json` on training and `--manife
 MLflow is optional; `python -m pip install '.[tracking]'` installs it when authorized. `mlflow ui --backend-store-uri sqlite:///runs/mlflow.db` opens the local UI. Checkpoints are trusted local files loaded with Python pickle; never load an untrusted checkpoint. Exact resume is tested only for single-process synthetic CPU and a matching environment. Manifest CIL accepts precomputed `interactive`/`leading` boolean masks of shape [B,A] (ego at index 0), optional `traffic_mask` and `traffic_replacement` tensors of shape [B,P], and optional `sdf` [B,H,W] in metres at 0.2 m/pixel. These inputs must be computed and causally validated by the caller. The CIL data path is tested on synthetic batches only. The tuner is CPU-only and compares its fixed effective batch of two. Worker-process recovery, real-data and GPU recovery are unverified.
 
 `--accumulate N` groups up to N consecutive microbatches per optimizer update; the final group may be smaller and is weighted by sample count. Because losses average over valid labels and the model uses stochastic layers, this does not guarantee equivalence to a single concatenated batch. The learning-rate schedule advances per epoch. Progress uses the current session to estimate remaining work; saved total active time is approximate because work after the checkpoint snapshot is not included across restarts.
+
+The optional nuPlan SQLite probe opens the database read-only, samples a single ego window, and omits all map, route, reference and other-agent features. It uses random model weights and is not a closed-loop or planning-quality evaluation.
+
+Training defaults to `--device cpu --precision fp32`. `--precision bf16` is available on CPU or supported CUDA devices, and `--precision fp16` requires CUDA; checkpoints include scaler state and CUDA random states. CPU BF16 resume is tested on the synthetic fixture; CUDA, real-data precision and GPU memory behavior are unverified. Resume requires the same device and precision configuration.

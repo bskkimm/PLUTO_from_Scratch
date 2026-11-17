@@ -42,3 +42,33 @@ def test_cil_training_resume_matches_uninterrupted(tmp_path):
     y = torch.load(b / "checkpoint.pt", map_location="cpu", weights_only=False)
     for key in x["model"]:
         assert torch.equal(x["model"][key], y["model"][key]), key
+
+
+def test_cpu_bfloat16_training_and_resume(tmp_path):
+    whole, resumed = tmp_path / "whole", tmp_path / "resumed"
+    run_training(whole, epochs=2, precision="bf16")
+    run_training(resumed, epochs=2, stop_after=1, precision="bf16")
+    run_training(resumed, epochs=2, resume=True, precision="bf16")
+    checkpoint = torch.load(
+        resumed / "checkpoint.pt", map_location="cpu", weights_only=False
+    )
+    baseline = torch.load(
+        whole / "checkpoint.pt", map_location="cpu", weights_only=False
+    )
+    assert checkpoint["epoch"] == 2
+    assert checkpoint["config"]["precision"] == "bf16"
+    assert "scaler" in checkpoint
+    assert all(
+        torch.equal(checkpoint["model"][key], baseline["model"][key])
+        for key in baseline["model"]
+    )
+
+
+def test_unavailable_cuda_fails_clearly(tmp_path):
+    import pytest
+
+    if torch.cuda.is_available():
+        pytest.skip("requires no CUDA")
+    with pytest.raises(RuntimeError, match="CUDA"):
+        run_training(tmp_path, epochs=1, device="cuda")
+    assert not (tmp_path / "checkpoint.pt").exists()

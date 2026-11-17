@@ -219,3 +219,75 @@ def test_connected_paths_do_not_skip_a_route_roadblock():
         segments, (1.0, 0.0, 0.0), route_ids=[10, 20, 30], max_references=1
     )[0]
     assert path.coords[-1] == pytest.approx((5.0, 0.0))
+
+
+def test_nuplan_drivable_polygons_generate_ego_centered_masks(tmp_path):
+    from pluto.nuplan_map import rasterize_map_scene
+
+    path = tmp_path / "map.gpkg"
+    c = sqlite3.connect(path)
+    for table in (
+        "lanes_polygons",
+        "gen_lane_connectors_scaled_width_polygons",
+        "generic_drivable_areas",
+    ):
+        c.execute(f"create table {table} (fid integer, geom blob)")
+        c.execute(
+            f"create virtual table rtree_{table}_geom using rtree(id,minx,maxx,miny,maxy)"
+        )
+    east, north = 365845.0, 143242.0
+    tr = Transformer.from_crs(32648, 4326, always_xy=True)
+    from shapely.geometry import Polygon
+
+    polygon = Polygon(
+        [
+            tr.transform(east + x, north + y)
+            for x, y in [(-2.0, -2.0), (2.0, -2.0), (2.0, 2.0), (-2.0, 2.0)]
+        ]
+    )
+    blob = b"GP" + bytes([0, 1]) + struct.pack("<i", 4326) + polygon.wkb
+    lon, lat = tr.transform(east, north)
+    c.execute("insert into lanes_polygons values (?,?)", (1, blob))
+    c.execute(
+        "insert into rtree_lanes_polygons_geom values (1,?,?,?,?)",
+        (lon - 0.001, lon + 0.001, lat - 0.001, lat + 0.001),
+    )
+    c.commit()
+    c.close()
+    batch = sample_batch(1, 4)
+    batch["static"] = torch.tensor([[[1.0, 1.0, 0.0, 1.0, 1.0]]])
+    batch["static_mask"] = torch.ones(1, 1, dtype=torch.bool)
+    batch["agent_mask"][:, 1:] = False
+    road, obstacles = rasterize_map_scene(
+        batch, path, (east, north, 0.0), epsg=32648, height=5, width=5, resolution=1.0
+    )
+    assert road[0, 2, 2] and obstacles[0, 1, 3]
+    assert not obstacles[0, 3, 3]
+
+
+def test_rasterized_map_rejects_empty_drivable_geometries(tmp_path):
+    from pluto.nuplan_map import rasterize_map_scene
+
+    path = tmp_path / "empty.gpkg"
+    c = sqlite3.connect(path)
+    for table in (
+        "lanes_polygons",
+        "gen_lane_connectors_scaled_width_polygons",
+        "generic_drivable_areas",
+    ):
+        c.execute(f"create table {table} (fid integer, geom blob)")
+        c.execute(
+            f"create virtual table rtree_{table}_geom using rtree(id,minx,maxx,miny,maxy)"
+        )
+    c.commit()
+    c.close()
+    with pytest.raises(ValueError, match="drivable"):
+        rasterize_map_scene(
+            sample_batch(1, 4),
+            path,
+            (365845.0, 143242.0, 0.0),
+            epsg=32648,
+            height=5,
+            width=5,
+            resolution=1.0,
+        )

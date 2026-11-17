@@ -10,7 +10,7 @@ import tempfile
 import torch
 from .nuplan_actors import read_ego_and_actors
 from .nuplan_ego import _yaw
-from .nuplan_map import add_map_features, read_route_context
+from .nuplan_map import add_map_features, rasterize_map_scene, read_route_context
 
 
 def _file_sha256(path):
@@ -76,7 +76,9 @@ def write_batch_manifest(batch, output_dir, split, provenance):
     return manifest_path
 
 
-def prepare_nuplan(log_path, map_path, timestamp, output_dir, split, modes=12):
+def prepare_nuplan(
+    log_path, map_path, timestamp, output_dir, split, modes=12, raster=False
+):
     """Prepare one heuristic nuPlan window; not official feature-builder parity."""
     log_path, map_path = (
         Path(log_path).resolve(strict=True),
@@ -100,6 +102,12 @@ def prepare_nuplan(log_path, map_path, timestamp, output_dir, split, modes=12):
         traffic_states=lights,
         modes=modes,
     )
+    if raster:
+        drivable, obstacle = rasterize_map_scene(
+            batch, map_path, (ego[0], ego[1], _yaw(*ego[2:6])), int(ego[6])
+        )
+        batch["drivable_mask"] = drivable
+        batch["obstacle_mask"] = obstacle
     provenance = {
         "kind": "nuplan-heuristic-single-window-v1",
         "log_basename": log_path.name,
@@ -108,6 +116,8 @@ def prepare_nuplan(log_path, map_path, timestamp, output_dir, split, modes=12):
         "map_sha256": _file_sha256(map_path),
         "timestamp_us": timestamp,
         "modes": modes,
+        "rasterized_current_scene": raster,
+        "raster_resolution_m": 0.2 if raster else None,
         "history_samples": 21,
         "future_samples": 80,
         "interval_us": 100000,
@@ -131,10 +141,21 @@ def main():
         "--split", required=True, help="honest split identifier, e.g. mini-diagnostic"
     )
     parser.add_argument("--modes", type=int, default=12)
+    parser.add_argument(
+        "--raster",
+        action="store_true",
+        help="include diagnostic drivable and current-object masks",
+    )
     args = parser.parse_args()
     print(
         prepare_nuplan(
-            args.log, args.map, args.timestamp, args.out, args.split, args.modes
+            args.log,
+            args.map,
+            args.timestamp,
+            args.out,
+            args.split,
+            args.modes,
+            args.raster,
         )
     )
 

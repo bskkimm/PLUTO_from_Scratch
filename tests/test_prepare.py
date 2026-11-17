@@ -46,3 +46,17 @@ def test_training_rejects_prepared_mode_count_mismatch_before_writing_checkpoint
     with pytest.raises(ValueError, match="mode"):
         run_training(tmp_path / "run", epochs=1, manifest=manifest, recipe="smoke")
     assert not (tmp_path / "run" / "checkpoint.pt").exists()
+
+
+def test_prepared_masks_can_be_consumed_without_replacing_provenance(tmp_path):
+    from pluto.train import run_training
+
+    batch = sample_batch(1, 4)
+    batch["drivable_mask"] = torch.ones(1, 9, 9, dtype=torch.bool)
+    batch["obstacle_mask"] = torch.zeros(1, 9, 9, dtype=torch.bool)
+    manifest = write_batch_manifest(
+        batch, tmp_path / "data", "mini", {"fixture": "mask"}
+    )
+    original = manifest.read_bytes()
+    result = run_training(tmp_path / "run", epochs=1, manifest=manifest, build_sdf=True)
+    assert result.exists() and manifest.read_bytes() == original

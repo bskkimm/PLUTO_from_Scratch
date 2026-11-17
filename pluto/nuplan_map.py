@@ -431,3 +431,95 @@ def read_route_context(log_path, timestamp, tolerance_us=100000):
     return route, {
         int(connector): code.get(str(status).lower(), 3) for connector, status in lights
     }
+
+
+def rasterize_map_scene(
+    batch, map_path, ego_pose, epsg, height=500, width=500, resolution=0.2
+):
+    """Rasterize nearby nuPlan drivable polygons and current object boxes.
+
+    This single-scene CPU diagnostic uses lane, lane-connector, and generic
+    drivable polygons. Object boxes use current observed sizes/poses. It does
+    not reproduce the official cost-map builder or model future occupancy.
+    """
+    from pyproj import Transformer
+    from shapely.affinity import rotate, translate
+    from shapely.geometry import box
+    from shapely.ops import transform
+    from .raster import rasterize_scene
+
+    if batch["target"].shape[0] != 1 or any(
+        v.device.type != "cpu" for v in batch.values()
+    ):
+        raise ValueError("raster preprocessing requires one CPU scene")
+    east, north, angle = ego_pose
+    radius = 0.5 * (height * height + width * width) ** 0.5 * resolution
+    to_ll = Transformer.from_crs(epsg, 4326, always_xy=True)
+    to_world = Transformer.from_crs(4326, epsg, always_xy=True)
+    bounds = to_ll.transform_bounds(
+        east - radius, north - radius, east + radius, north + radius, densify_pts=21
+    )
+    polygons = []
+    path = Path(map_path).resolve(strict=True)
+    with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as connection:
+        for table in (
+            "lanes_polygons",
+            "gen_lane_connectors_scaled_width_polygons",
+            "generic_drivable_areas",
+        ):
+            query = f"SELECT t.geom FROM {table} t JOIN rtree_{table}_geom r ON t.fid=r.id WHERE r.maxx>=? AND r.minx<=? AND r.maxy>=? AND r.miny<=?"
+            for (blob,) in connection.execute(
+                query, (bounds[0], bounds[2], bounds[1], bounds[3])
+            ):
+                geometry = transform(to_world.transform, _geometry(blob))
+                geometry = rotate(
+                    translate(geometry, xoff=-east, yoff=-north),
+                    -angle,
+                    origin=(0, 0),
+                    use_radians=True,
+                )
+                if not geometry.is_valid:
+                    raise ValueError(f"invalid drivable polygon in {table}")
+                polygons.append(geometry)
+    if not polygons:
+        raise ValueError("no drivable map polygons found near the scene")
+    obstacles = []
+    for obj, valid in zip(batch["static"][0], batch["static_mask"][0]):
+        if valid and obj[3] > 0 and obj[4] > 0:
+            x, y, yaw, w, length = obj.tolist()
+            obstacles.append(
+                translate(
+                    rotate(
+                        box(-length / 2, -w / 2, length / 2, w / 2),
+                        yaw,
+                        origin=(0, 0),
+                        use_radians=True,
+                    ),
+                    xoff=x,
+                    yoff=y,
+                )
+            )
+    if "agent_pose" in batch:
+        for index in range(1, batch["agents"].shape[1]):
+            mask = batch["agent_mask"][0, index]
+            if not mask.any():
+                continue
+            last = mask.nonzero()[-1, 0]
+            w, length = batch["agents"][0, index, last, 6:8].tolist()
+            if w > 0 and length > 0:
+                x, y, yaw = batch["agent_pose"][0, index].tolist()
+                obstacles.append(
+                    translate(
+                        rotate(
+                            box(-length / 2, -w / 2, length / 2, w / 2),
+                            yaw,
+                            origin=(0, 0),
+                            use_radians=True,
+                        ),
+                        xoff=x,
+                        yoff=y,
+                    )
+                )
+    return rasterize_scene(
+        polygons, obstacles, height=height, width=width, resolution=resolution
+    )

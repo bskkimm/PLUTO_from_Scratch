@@ -41,3 +41,5 @@ python -m pluto.evaluate runs/one-step/checkpoint.pt --manifest runs/prepared/ma
 ```
 
 This example intentionally performs one update on one window. Its evaluation uses that same window and is only an integration diagnostic. Prepared `--modes` must match the chosen recipe; preparation and data storage are explicit opt-ins.
+
+Optional manifest CIL insertion uses `insertion_donor_batch`, `insertion_donor_agent`, `insertion_slot` (each integer `[B]`, slot -1 means no insertion), and `insertion_pose` `[B,3]`. The destination must be an empty non-ego slot. The caller must transform donor history to the recipient frame and validate the insertion causally; the inserted agent’s prediction labels are masked.

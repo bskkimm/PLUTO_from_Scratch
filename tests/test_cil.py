@@ -152,3 +152,56 @@ def test_noncontrastive_training_can_include_sdf_auxiliary():
     assert with_sdf["total"] > without["total"]
     with_sdf["total"].backward()
     assert torch.isfinite(model.trajectory_head[0].weight.grad).all()
+
+
+def test_insert_leading_agent_uses_empty_slot_and_preserves_original():
+    from pluto.augmentation import insert_agent
+
+    batch = sample_batch(2, 4)
+    batch["agent_mask"][0, 2] = False
+    batch["agent_target_mask"][0, 1] = False
+    batch["agent_pose"] = torch.zeros(2, 3, 3)
+    batch["agent_type"] = torch.tensor([[0, 1, 0], [0, 2, 1]])
+    donor = torch.tensor([1, 1])
+    donor_agent = torch.tensor([1, 2])
+    slots = torch.tensor([2, -1])
+    poses = torch.tensor([[8.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+    view, changed = insert_agent(batch, donor, donor_agent, slots, poses)
+    assert changed.tolist() == [True, False]
+    assert view["agent_mask"][0, 2].all() and not batch["agent_mask"][0, 2].any()
+    assert torch.equal(view["agents"][0, 2], batch["agents"][1, 1])
+    assert torch.equal(view["agent_pose"][0, 2], poses[0])
+    assert view["agent_type"][0, 2] == 2
+    assert not view["agent_target_mask"][0, 1].any()
+
+
+def test_insert_agent_rejects_occupied_ego_and_invalid_donor():
+    from pluto.augmentation import insert_agent
+    import pytest
+
+    batch = sample_batch(1, 4)
+    batch["agent_pose"] = torch.zeros(1, 3, 3)
+    args = (batch, torch.tensor([0]), torch.tensor([1]))
+    with pytest.raises(ValueError, match="empty non-ego"):
+        insert_agent(*args, torch.tensor([1]), torch.zeros(1, 3))
+    with pytest.raises(ValueError, match="empty non-ego"):
+        insert_agent(*args, torch.tensor([0]), torch.zeros(1, 3))
+
+
+def test_causal_views_can_use_validated_insertion_when_no_interaction():
+    from pluto.augmentation import make_causal_views
+
+    batch = sample_batch(2, 4)
+    batch["agent_mask"][0, 2] = False
+    batch["agent_pose"] = torch.zeros(2, 3, 3)
+    empty = torch.zeros(2, 3, dtype=torch.bool)
+    insertion = {
+        "donor_batch": torch.tensor([1, 1]),
+        "donor_agent": torch.tensor([1, 1]),
+        "destination_slot": torch.tensor([2, -1]),
+        "poses": torch.tensor([[8.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+    }
+    _, negative, valid = make_causal_views(batch, empty, empty, insertion=insertion)
+    assert valid.tolist() == [True, False]
+    assert negative["agent_mask"][0, 2].any()
+    assert not negative["agent_target_mask"][0, 1].any()

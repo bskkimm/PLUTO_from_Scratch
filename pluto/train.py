@@ -199,12 +199,32 @@ def run_training(
                                 raise ValueError(
                                     "manifest CIL requires interactive and leading masks"
                                 )
+                            names = (
+                                "insertion_donor_batch",
+                                "insertion_donor_agent",
+                                "insertion_slot",
+                                "insertion_pose",
+                            )
+                            present = [name in batch for name in names]
+                            if any(present) and not all(present):
+                                raise ValueError(
+                                    "all insertion metadata fields are required"
+                                )
+                            insertion = None
+                            if all(present):
+                                insertion = {
+                                    "donor_batch": batch[names[0]],
+                                    "donor_agent": batch[names[1]],
+                                    "destination_slot": batch[names[2]],
+                                    "poses": batch[names[3]],
+                                }
                             positive, negative, contrast_valid = make_causal_views(
                                 batch,
                                 batch["interactive"],
                                 batch["leading"],
                                 batch.get("traffic_mask"),
                                 batch.get("traffic_replacement"),
+                                insertion,
                             )
                         components = contrastive_objective(
                             model,

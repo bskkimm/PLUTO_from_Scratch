@@ -155,3 +155,35 @@ def test_manifest_can_build_sdf_and_train_without_contrastive_views(tmp_path):
     b = torch.load(without_map, map_location="cpu", weights_only=False)
     assert a["config"]["build_sdf"] is True
     assert any(not torch.equal(a["model"][k], b["model"][k]) for k in a["model"])
+
+
+def test_manifest_cil_consumes_insertion_metadata(tmp_path):
+    batch = sample_batch(2, 4)
+    batch["agent_mask"][0, 2] = False
+    batch["agent_pose"] = torch.zeros(2, 3, 3)
+    batch["interactive"] = torch.zeros(2, 3, dtype=torch.bool)
+    batch["leading"] = torch.zeros(2, 3, dtype=torch.bool)
+    batch["insertion_donor_batch"] = torch.tensor([1, 1])
+    batch["insertion_donor_agent"] = torch.tensor([1, 1])
+    batch["insertion_slot"] = torch.tensor([2, -1])
+    batch["insertion_pose"] = torch.tensor([[8.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+    path = tmp_path / "batch.pt"
+    torch.save(batch, path)
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "format": "pluto-batches-v1",
+                "split": "train",
+                "batches": [
+                    {
+                        "path": path.name,
+                        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                    }
+                ],
+            }
+        )
+    )
+    checkpoint = run_training(tmp_path / "run", epochs=1, manifest=manifest, cil=True)
+    state = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    assert state["optimizer_steps"] == 1

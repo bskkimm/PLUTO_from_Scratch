@@ -35,14 +35,19 @@ def perturb_state(batch, noise):
 
 
 def make_causal_views(
-    batch, interactive, leading, traffic_mask=None, traffic_replacement=None
+    batch,
+    interactive,
+    leading,
+    traffic_mask=None,
+    traffic_replacement=None,
+    insertion=None,
 ):
     """Build views from externally established interaction and traffic labels.
 
     For each example, positive removes noninteractive/nonleading agents;
-    negative removes interactive/leading agents. If none exist, it may replace
-    explicitly selected traffic-light states. A False validity flag means no
-    supported negative change occurred. Interaction labels, leading masks and
+    negative removes interactive/leading agents. If none exist, it may insert
+    a caller-validated agent or replace selected traffic-light states. A False
+    validity flag means no supported negative change occurred. Interaction labels, leading masks and
     appropriate replacement states must come from scene-aware preprocessing;
     this function does not infer or validate causal interactions.
     """
@@ -59,6 +64,25 @@ def make_causal_views(
     positive = mask_agents(batch, positive_drop)
     negative = mask_agents(batch, causal)
     valid = causal.any(-1)
+    if insertion is not None:
+        required = {"donor_batch", "donor_agent", "destination_slot", "poses"}
+        if set(insertion) != required:
+            raise ValueError(
+                "insertion must contain donor_batch, donor_agent, destination_slot and poses"
+            )
+        slots = torch.where(
+            valid,
+            torch.full_like(insertion["destination_slot"], -1),
+            insertion["destination_slot"],
+        )
+        negative, inserted = insert_agent(
+            negative,
+            insertion["donor_batch"],
+            insertion["donor_agent"],
+            slots,
+            insertion["poses"],
+        )
+        valid = valid | inserted
     if traffic_mask is not None or traffic_replacement is not None:
         if (
             traffic_mask is None
@@ -88,3 +112,53 @@ def make_causal_views(
         )
         valid = valid | change.any(-1)
     return positive, negative, valid
+
+
+def insert_agent(batch, donor_batch, donor_agent, destination_slot, poses):
+    """Insert caller-selected donor history into empty non-ego slots.
+
+    `donor_batch`, `donor_agent`, and `destination_slot` are integer [B]
+    indices; slot -1 means no insertion for that example. `poses` is [B,3]
+    in the recipient ego frame. Donor history is copied unchanged, so caller
+    must transform/validate its orientation and select a causally meaningful
+    placement. Inserted agent targets are masked: the copied history supplies
+    no valid ground truth in the recipient scene. No mutation of input occurs.
+    """
+    history = batch["agents"]
+    b, a = history.shape[:2]
+    if "agent_pose" not in batch or poses.shape != (b, 3):
+        raise ValueError("agent_pose and replacement poses [B,3] are required")
+    for index in (donor_batch, donor_agent, destination_slot):
+        if index.shape != (b,) or index.dtype not in (torch.int32, torch.int64):
+            raise ValueError("indices must be integer [B] tensors")
+    selected = destination_slot >= 0
+    if ((destination_slot < -1) | (destination_slot >= a)).any():
+        raise ValueError("destination must be -1 or an empty non-ego slot")
+    if (selected & (destination_slot == 0)).any():
+        raise ValueError("destination must be an empty non-ego slot")
+    if (
+        selected
+        & (
+            (donor_batch < 0)
+            | (donor_batch >= b)
+            | (donor_agent <= 0)
+            | (donor_agent >= a)
+        )
+    ).any():
+        raise ValueError("invalid donor indices")
+    rows = selected.nonzero(as_tuple=True)[0]
+    dest = destination_slot[rows].long()
+    src_batch = donor_batch[rows].long()
+    src_agent = donor_agent[rows].long()
+    if batch["agent_mask"][rows, dest].any():
+        raise ValueError("destination must be an empty non-ego slot")
+    if not batch["agent_mask"][src_batch, src_agent].any(dim=-1).all():
+        raise ValueError("donor must contain valid history")
+    view = {key: value.clone() for key, value in batch.items()}
+    view["agents"][rows, dest] = batch["agents"][src_batch, src_agent]
+    view["agent_mask"][rows, dest] = batch["agent_mask"][src_batch, src_agent]
+    view["agent_pose"][rows, dest] = poses[rows]
+    if "agent_type" in batch:
+        view["agent_type"][rows, dest] = batch["agent_type"][src_batch, src_agent]
+    view["agent_target_mask"][rows, dest - 1] = False
+    return view, selected

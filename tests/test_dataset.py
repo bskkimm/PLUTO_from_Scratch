@@ -123,3 +123,35 @@ def test_gradient_accumulation_updates_partial_final_group(tmp_path):
     state = torch.load(checkpoint, map_location="cpu", weights_only=False)
     assert state["optimizer_steps"] == 2
     assert state["config"]["accumulation_steps"] == 2
+
+
+def test_manifest_can_build_sdf_and_train_without_contrastive_views(tmp_path):
+    batch = sample_batch(2, 4)
+    batch["drivable_mask"] = torch.zeros(2, 7, 7, dtype=torch.bool)
+    batch["drivable_mask"][:, :, 3:] = True
+    batch["obstacle_mask"] = torch.zeros(2, 7, 7, dtype=torch.bool)
+    path = tmp_path / "batch.pt"
+    torch.save(batch, path)
+    manifest = tmp_path / "train.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "format": "pluto-batches-v1",
+                "split": "train",
+                "batches": [
+                    {
+                        "path": path.name,
+                        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                    }
+                ],
+            }
+        )
+    )
+    with_map = run_training(
+        tmp_path / "with", epochs=1, manifest=manifest, build_sdf=True
+    )
+    without_map = run_training(tmp_path / "without", epochs=1, manifest=manifest)
+    a = torch.load(with_map, map_location="cpu", weights_only=False)
+    b = torch.load(without_map, map_location="cpu", weights_only=False)
+    assert a["config"]["build_sdf"] is True
+    assert any(not torch.equal(a["model"][k], b["model"][k]) for k in a["model"])

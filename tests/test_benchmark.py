@@ -11,3 +11,9 @@ def test_benchmark_measures_real_loader_and_optimizer_steps():
     assert math.isfinite(result["paths"]["cached_step"]["last_loss"])
     assert math.isfinite(result["paths"]["end_to_end"]["last_loss"])
     assert result["paths"]["end_to_end"]["loader_wait_seconds"] >= 0
+
+
+def test_benchmark_records_code_hashes():
+    result = benchmark(iterations=1, warmup=0, batch_size=1)
+    assert len(result["source_sha256"]["pluto/model.py"]) == 64
+    assert len(result["source_sha256"]["pluto/benchmark.py"]) == 64

@@ -223,3 +223,44 @@ def test_history_encoder_ignores_padding_and_handles_empty_agents():
     assert torch.allclose(first, second)
     assert torch.isfinite(first).all()
     assert torch.equal(first[0, 1], torch.zeros_like(first[0, 1]))
+
+
+def test_sdf_figure_hinge_example():
+    trajectory = torch.tensor([[[0.0, 0.0, 1.0, 0.0]]])
+    distance_field = torch.full((1, 5, 5), 0.7)
+    actual = sdf_loss(
+        trajectory,
+        distance_field,
+        resolution=1.0,
+        offsets=(0.0,),
+        radius=1.0,
+        margin=0.2,
+    )
+    assert torch.allclose(actual, torch.tensor(0.5), atol=1e-6)
+
+
+def test_inference_figure_ade_example():
+    prediction = torch.tensor([[0.0, 0.0], [2.0, 0.0]])
+    target = torch.tensor([[0.0, 0.0], [1.0, 0.0]])
+    assert torch.equal((prediction - target).norm(dim=-1).mean(), torch.tensor(0.5))
+
+
+def test_half_precision_masked_references_remain_finite():
+    torch.manual_seed(31)
+    cfg = PlutoConfig(
+        dim=16,
+        heads=4,
+        encoder_layers=1,
+        decoder_layers=1,
+        modes=3,
+        future_steps=4,
+        dropout=0.0,
+    )
+    model = Pluto(cfg).eval()
+    batch = sample_batch(2, 4)
+    batch["reference_mask"][:] = False
+    with torch.autocast("cpu", dtype=torch.float16):
+        out = model(batch)
+        loss = imitation_loss(out, batch)["total"]
+    assert torch.isfinite(out["logits"]).all()
+    assert torch.isfinite(loss)

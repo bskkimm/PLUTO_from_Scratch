@@ -382,7 +382,10 @@ class Pluto(nn.Module):
             q = layer(q, memory, ref_valid, scene_valid)
         trajectory = self.trajectory_head(q).reshape(b, r, c.modes, c.future_steps, 6)
         logits = (
-            self.score_head(q).squeeze(-1).masked_fill(~ref_valid.unsqueeze(-1), -1e9)
+            self.score_head(q)
+            .squeeze(-1)
+            .float()
+            .masked_fill(~ref_valid.unsqueeze(-1), -1e9)
         )
         best = logits.reshape(b, -1).argmax(-1)
         selected = trajectory.reshape(b, r * c.modes, c.future_steps, 6)[

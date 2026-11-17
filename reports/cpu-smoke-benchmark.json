@@ -1,33 +1,41 @@
 {
   "device": "cpu",
   "cpu_model": "Intel(R) Core(TM) i9-14900K",
-  "code_base_revision": "c6d3612f3f53cfca4d746dd139847b926e851ecc",
+  "code_base_revision": "16678d629d7d2a9110a57ca5289cf14c362153f1",
   "code_dirty": true,
+  "source_sha256": {
+    "pluto/model.py": "2bccbfa715929a124ced64541511700c431722338f2f28ee174c486048234f5c",
+    "pluto/losses.py": "53644ea6fe3cec1feb7e94011c30869a3f50d3472c3f8f8a9afa4458c08a0e0f",
+    "pluto/synthetic.py": "a89ad0da7929d9fdf95a05827278dd302bbc8d0c0e3b4dd83da993c3d231018e",
+    "pluto/recipes.py": "df0912d6505c205af56f847877477a14b65de2e42ac18962fb1ec021beb02f95",
+    "pluto/benchmark.py": "317dbc3d4e4ccb7c9145c3aa870001897aa6453a4fc8afa56fab5c9bd40288c8"
+  },
   "dataset": "generated synthetic samples; no disk cache",
   "workers": 0,
+  "intraop_threads": 1,
   "iterations": 8,
   "warmup_steps": 3,
   "batch_size": 2,
-  "startup_seconds": 0.32622057299886364,
-  "peak_process_rss_kib_linux": 627084,
+  "startup_seconds": 0.3249224570026854,
+  "peak_process_rss_kib_linux": 628452,
   "python": "3.11.14",
   "torch": "2.9.1+cu130",
   "paths": {
     "loader": {
-      "seconds": 0.0008310029952554032,
-      "samples_per_second": 19253.841552138456
+      "seconds": 0.0008367359987460077,
+      "samples_per_second": 19121.9213993168
     },
     "cached_step": {
-      "seconds": 0.07209538699680706,
-      "samples_per_second": 221.92820742759315,
+      "seconds": 0.07604349999746773,
+      "samples_per_second": 210.40588611167036,
       "last_loss": 1.9024150371551514
     },
     "end_to_end": {
-      "seconds": 0.07251987100607948,
-      "loader_wait_seconds": 0.0014291909901658073,
-      "samples_per_second": 220.62918449839339,
+      "seconds": 0.07705171500856522,
+      "loader_wait_seconds": 0.0014776910102227703,
+      "samples_per_second": 207.65274333246714,
       "last_loss": 1.909456491470337
     }
   },
-  "scope": "CPU wall time; cached and end-to-end include loss, backward and optimizer step"
+  "scope": "CPU wall time; cached and end-to-end include loss, backward, gradient clipping and optimizer step at fixed epoch learning rate"
 }

@@ -1,0 +1,41 @@
+{
+  "code_base_revision": "16678d629d7d2a9110a57ca5289cf14c362153f1",
+  "code_dirty": true,
+  "python": "3.11.14",
+  "torch": "2.9.1+cu130",
+  "model_config": {
+    "dim": 16,
+    "heads": 4,
+    "encoder_layers": 1,
+    "decoder_layers": 1,
+    "modes": 3,
+    "future_steps": 80,
+    "dropout": 0.0,
+    "state_dropout": 0.75
+  },
+  "source_sha256": {
+    "pluto/model.py": "2bccbfa715929a124ced64541511700c431722338f2f28ee174c486048234f5c",
+    "pluto/data.py": "bfa57541f6edf12b75a3e3a08438dde8b5446034d9fde2332118578c7626a120",
+    "pluto/nuplan_ego.py": "fc6c67502f91828f72d88acaf5678ed44e346670958e59fe56e5ac8e8ce1bc52",
+    "pluto/nuplan_actors.py": "2de75a30a684e483d92681e78ccf6e2c940b89c08641d610a29f1f57a0d707b3",
+    "scripts/probe_nuplan_ego.py": "a1ab54c607a70bb74d105f300e91b6b2a0b3d375c5455c0bf79f0ff3f9e82754"
+  },
+  "database_basename": "2021.10.11.07.12.18_veh-50_00211_00304.db",
+  "database_sha256": "6f8447645ad6c564fb6624262d2b64f03e73bf85237f6b1932a8253f76092851",
+  "center_timestamp_requested_us": 1633936730608492,
+  "history_samples": 21,
+  "future_samples": 80,
+  "seed": 123,
+  "device": "cpu",
+  "weights": "random",
+  "features": "ego and tracked actors; no map or reference lines",
+  "actor_count": 4,
+  "static_count": 9,
+  "selected_shape": [
+    1,
+    80,
+    6
+  ],
+  "finite_output": true,
+  "limitation": "read-only integration diagnostic; not training, official nuPlan evaluation, or planning-quality evidence"
+}

@@ -51,6 +51,21 @@ def verify_notebook(root):
             raise ValueError(f"figure integrity mismatch: {name}")
     if {p.name for p in asset_dir.glob("*.svg")} != set(attachments):
         raise ValueError("orphaned or missing SVG asset")
+    previews = asset_dir / "previews"
+    preview_manifest = json.loads((previews / "preview-manifest.json").read_text())
+    if set(preview_manifest["figures"]) != set(attachments):
+        raise ValueError("preview manifest inventory mismatch")
+    expected_pngs = set()
+    for name, entry in preview_manifest["figures"].items():
+        preview_name = Path(name).with_suffix(".png").name
+        expected_pngs.add(preview_name)
+        if (
+            _digest((asset_dir / name).read_bytes()) != entry["svg_sha256"]
+            or _digest((previews / preview_name).read_bytes()) != entry["png_sha256"]
+        ):
+            raise ValueError(f"preview integrity mismatch: {name}")
+    if {p.name for p in previews.glob("*.png")} != expected_pngs:
+        raise ValueError("orphaned or missing preview")
     with tempfile.TemporaryDirectory() as temp:
         target = Path(temp)
         for name in manifest["sources"]:

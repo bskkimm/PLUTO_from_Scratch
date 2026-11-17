@@ -14,6 +14,7 @@ import torch
 from .model import Pluto
 from .recipes import get_recipe, make_scheduler
 from .dataset import BatchManifest
+from .costmap import signed_distance_field
 from .augmentation import make_causal_views, mask_agents, perturb_state
 from .objective import contrastive_objective, supervised_objective
 from .progress import estimate_progress
@@ -34,6 +35,7 @@ def run_training(
     accumulation_steps=1,
     device="cpu",
     precision="fp32",
+    build_sdf=False,
 ):
     if device not in ("cpu", "cuda"):
         raise ValueError("device must be cpu or cuda")
@@ -70,6 +72,7 @@ def run_training(
         "accumulation_steps": accumulation_steps,
         "device": device,
         "precision": precision,
+        "build_sdf": build_sdf,
         "cil": cil,
         "tracking_uri": tracking_uri,
     }
@@ -151,6 +154,18 @@ def run_training(
             optimizer.zero_grad()
             for batch in group:
                 batch = {key: value.to(device) for key, value in batch.items()}
+                if build_sdf:
+                    if (
+                        "sdf" in batch
+                        or "drivable_mask" not in batch
+                        or "obstacle_mask" not in batch
+                    ):
+                        raise ValueError(
+                            "--build-sdf requires masks and no existing sdf"
+                        )
+                    batch["sdf"] = signed_distance_field(
+                        batch["drivable_mask"], batch["obstacle_mask"]
+                    )
                 if batch["target"].shape[1] != cfg.future_steps:
                     raise ValueError(
                         "batch target horizon differs from the chosen recipe"
@@ -275,6 +290,11 @@ def main():
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
+    parser.add_argument(
+        "--build-sdf",
+        action="store_true",
+        help="build distance fields from prepared boolean masks",
+    )
     parser.add_argument("--precision", choices=["fp32", "bf16", "fp16"], default="fp32")
     parser.add_argument(
         "--accumulate", type=int, default=1, help="microbatches per optimizer update"
@@ -309,6 +329,7 @@ def main():
         args.accumulate,
         args.device,
         args.precision,
+        args.build_sdf,
     )
 
 

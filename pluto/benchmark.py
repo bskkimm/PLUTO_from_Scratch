@@ -1,6 +1,8 @@
 """Bounded CPU throughput measurements on the synthetic smoke fixture."""
 
 import argparse
+import hashlib
+from pathlib import Path
 import json
 import platform
 import resource
@@ -46,6 +48,7 @@ def benchmark(iterations=10, warmup=2, batch_size=2):
         optimizer.zero_grad()
         loss = imitation_loss(model(batch), batch)["total"]
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
         optimizer.step()
         return float(loss.detach())
 
@@ -89,19 +92,34 @@ def benchmark(iterations=10, warmup=2, batch_size=2):
         "samples_per_second": iterations * batch_size / elapsed,
         "last_loss": loss,
     }
+    source_root = Path(__file__).resolve().parent.parent
     try:
+        git_root = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=source_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        if Path(git_root).resolve() != source_root:
+            raise ValueError("source directory is not the Git root")
         revision = subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+            ["git", "rev-parse", "HEAD"],
+            cwd=source_root,
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
         dirty = bool(
             subprocess.run(
                 ["git", "status", "--porcelain"],
+                cwd=source_root,
                 capture_output=True,
                 text=True,
                 check=True,
             ).stdout.strip()
         )
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError, ValueError):
         revision, dirty = None, None
     cpu_model = (
         next(
@@ -120,8 +138,21 @@ def benchmark(iterations=10, warmup=2, batch_size=2):
         "cpu_model": cpu_model,
         "code_base_revision": revision,
         "code_dirty": dirty,
+        "source_sha256": {
+            f"pluto/{name}": hashlib.sha256(
+                (Path(__file__).parent / name).read_bytes()
+            ).hexdigest()
+            for name in (
+                "model.py",
+                "losses.py",
+                "synthetic.py",
+                "recipes.py",
+                "benchmark.py",
+            )
+        },
         "dataset": "generated synthetic samples; no disk cache",
         "workers": 0,
+        "intraop_threads": torch.get_num_threads(),
         "iterations": iterations,
         "warmup_steps": warmup,
         "batch_size": batch_size,
@@ -132,7 +163,7 @@ def benchmark(iterations=10, warmup=2, batch_size=2):
         "python": platform.python_version(),
         "torch": torch.__version__,
         "paths": rows,
-        "scope": "CPU wall time; cached and end-to-end include loss, backward and optimizer step",
+        "scope": "CPU wall time; cached and end-to-end include loss, backward, gradient clipping and optimizer step at fixed epoch learning rate",
     }
 
 

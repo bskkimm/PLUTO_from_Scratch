@@ -1,6 +1,7 @@
 """Opt-in bounded CPU thread tuning for the unchanged smoke training recipe."""
 
 import argparse
+import hashlib
 import json
 import statistics
 import time
@@ -40,6 +41,7 @@ def _fixture():
                 for p in model.parameters()
             ]
         losses.append(loss.detach().clone())
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
         optimizer.step()
     return predictions, gradients, torch.stack(losses)
 
@@ -65,7 +67,7 @@ def tune(output, threads=(1, 2), iterations=5, warmup=2, repeats=2, max_seconds=
 
     The total deadline is checked between fixed-size trials, so one trial can
     finish after it. Architecture, synthetic data, batch=2, objective, FP32,
-    optimizer and scheduler are unchanged. Not a GPU or microbatch tuner.
+    optimizer and fixed epoch learning rate are unchanged. Not a GPU or microbatch tuner.
     """
     if (
         not threads
@@ -87,6 +89,10 @@ def tune(output, threads=(1, 2), iterations=5, warmup=2, repeats=2, max_seconds=
     result = {
         "effective_batch_size": 2,
         "fixture": "synthetic smoke FP32",
+        "tuner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "iterations": iterations,
+        "warmup_steps": warmup,
+        "repeats": repeats,
         "max_seconds": max_seconds,
         "deadline_scope": "checked between trials",
         "trials": trials,
@@ -110,12 +116,30 @@ def tune(output, threads=(1, 2), iterations=5, warmup=2, repeats=2, max_seconds=
                 if not correct:
                     row["reason"] = "FP32 output, gradient or learning parity failed"
                     continue
-                runs = [
-                    benchmark(iterations, warmup, 2)["paths"]["end_to_end"][
-                        "samples_per_second"
-                    ]
-                    for _ in range(repeats)
+                measurements = [
+                    benchmark(iterations, warmup, 2) for _ in range(repeats)
                 ]
+                runs = [
+                    measurement["paths"]["end_to_end"]["samples_per_second"]
+                    for measurement in measurements
+                ]
+                if "environment" not in result:
+                    result["environment"] = {
+                        key: measurements[0][key]
+                        for key in (
+                            "python",
+                            "torch",
+                            "cpu_model",
+                            "code_base_revision",
+                            "code_dirty",
+                            "source_sha256",
+                            "dataset",
+                            "device",
+                        )
+                    }
+                row["peak_process_rss_kib_linux"] = max(
+                    m["peak_process_rss_kib_linux"] for m in measurements
+                )
                 rate = statistics.median(runs)
                 row.update(
                     {

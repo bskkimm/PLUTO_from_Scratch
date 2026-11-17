@@ -53,3 +53,16 @@ def test_notebook_integrity_rejects_stale_source(tmp_path):
 
     with pytest.raises(ValueError, match="source"):
         verify_notebook(tmp_path)
+
+
+def test_notebook_integrity_rejects_modified_preview(tmp_path):
+    import shutil
+    import pytest
+    from scripts.check_notebook import verify_notebook
+
+    for name in ("pluto", "notebooks", "scripts"):
+        shutil.copytree(name, tmp_path / name)
+    preview = tmp_path / "notebooks/assets/architecture/previews/overview.png"
+    preview.write_bytes(preview.read_bytes() + b"changed")
+    with pytest.raises(ValueError, match="preview"):
+        verify_notebook(tmp_path)

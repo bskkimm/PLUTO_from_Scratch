@@ -14,4 +14,6 @@ def test_bounded_tuner_records_trials_and_valid_choice(tmp_path):
         row["threads"] for row in saved["trials"] if row["accepted"]
     ]
     assert saved["effective_batch_size"] == 2
+    assert saved["iterations"] == 2 and saved["warmup_steps"] == 1
+    assert saved["environment"]["torch"]
     assert all("reason" in row for row in saved["trials"])

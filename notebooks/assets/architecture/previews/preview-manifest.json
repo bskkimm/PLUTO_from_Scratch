@@ -1,0 +1,49 @@
+{
+  "cairo_version": "1.16.0",
+  "figures": {
+    "bicycle.svg": {
+      "png_sha256": "45ec8f6fcd546f3a9d65b93d79641112739c64497599db5d0afbb0127b9d9751",
+      "svg_sha256": "37f17e3443394c268a1a9269c518e0d12b844fa155719c30b769e004e5146f77"
+    },
+    "checkpoint.svg": {
+      "png_sha256": "96a848dba4378d344ec73382df665692de1599f4a46dbe46209f0b99490f8fb0",
+      "svg_sha256": "39038130c13554590cde35cfb54792bd56b943b1845207226b1e7a56cd48984a"
+    },
+    "contrastive.svg": {
+      "png_sha256": "8724aa67cf98f51e8ac5658700f24fd20b4a5c7e4bc079a5d43ad2e5b567a67b",
+      "svg_sha256": "d79aecf26a6e8ecbf23029530016ff0eb6d4b8e5b80c7fb5c4e59fa6288fe2a7"
+    },
+    "data-flow.svg": {
+      "png_sha256": "b430a4e2be8a445d23bbefe6cd19c6688b55c349d07d29d59c95a1edd3d93a6b",
+      "svg_sha256": "5729ad25834c5711ebc66fb651cda7a534a51a8eb50c30659b7754271cb71c26"
+    },
+    "history-pyramid.svg": {
+      "png_sha256": "1e210e0815eacab6dfebd153a1c3511406494e99d28f43ef54ecb10c2c1caa0e",
+      "svg_sha256": "4bbe941c50e8cadfb020808683b2d77fa3e729817bd7a3d0346b6d3d7417053b"
+    },
+    "inference.svg": {
+      "png_sha256": "b15be66cc09874dd8280ffcc20a4c5fbb156ba5696d4de116cf5f7200173495a",
+      "svg_sha256": "37940bda0abb66f19f2dc45e5feef61d79076c6895c55128089631e07357e1da"
+    },
+    "loss.svg": {
+      "png_sha256": "bb4f10fb1ab42a51f5076b13bee95aa7680d6ddcaf2e3e6d2fb036171a8551f2",
+      "svg_sha256": "6286cd219228490334076b399ebfb99aa2a953ad2bf2475fd22cb4e2911bd7c5"
+    },
+    "overview.svg": {
+      "png_sha256": "3c276d374a2df9deddd42f7dca3ecee6705f1bd7f09d6aa87c93fad50110bc22",
+      "svg_sha256": "ed2938f909d510352a0555686db88545a32bcebd16ce57ec9b09e8f65399ca46"
+    },
+    "query-grid.svg": {
+      "png_sha256": "5144ddec7350d094ab70b92527f0da212514f7e3ae5f704e243e135d0915fb57",
+      "svg_sha256": "0805a6dbf122c65a0ff8a95be00746334c8bab6f3dcc83f5d5a4cd4fc7bc883a"
+    },
+    "shapes.svg": {
+      "png_sha256": "ba4a77bf3683ccdc98a5dd8ab337bb6386f0e590c6254e219c33aa80516c24a7",
+      "svg_sha256": "39bd59505525e996421b2709070c9fb2136fd2f09b2f988548bfe10b7ab5173c"
+    }
+  },
+  "font": "DejaVuSans.ttf",
+  "font_sha256": "690243adfefe0ce154b547db6205794bd30ac4277275179517a90994f4980648",
+  "librsvg_version": "2.52.5+dfsg-3ubuntu0.2",
+  "renderer": "librsvg + Cairo"
+}

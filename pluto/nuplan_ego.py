@@ -1,6 +1,6 @@
 """Read-only ego-only nuPlan SQLite diagnostic; not a complete PLUTO adapter."""
 
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 import math
 from pathlib import Path
 import sqlite3
@@ -16,6 +16,9 @@ def read_ego_only(
     path, center_timestamp=None, history_steps=21, future_steps=80, interval_us=100000
 ):
     """Sample ego poses around a timestamp in microseconds, with 50ms tolerance.
+
+    History and current inputs use only samples at or before each target time;
+    future labels use the closest available sample.
 
     Inputs are a nuPlan log SQLite path, the current timestamp, historical
     count including the current frame, and future count. Output follows the
@@ -50,9 +53,16 @@ def read_ego_only(
     for i in range(-(history_steps - 1), future_steps + 1):
         timestamp = center_timestamp + i * interval_us
         idx = bisect_left(timestamps, timestamp)
-        options = [j for j in (idx - 1, idx) if 0 <= j < len(rows)]
-        closest = min(options, key=lambda j: abs(timestamps[j] - timestamp))
-        if abs(timestamps[closest] - timestamp) > tolerance:
+        if i <= 0:
+            closest = bisect_right(timestamps, timestamp) - 1
+        else:
+            options = [j for j in (idx - 1, idx) if 0 <= j < len(rows)]
+            closest = (
+                min(options, key=lambda j: abs(timestamps[j] - timestamp))
+                if options
+                else -1
+            )
+        if closest < 0 or abs(timestamps[closest] - timestamp) > tolerance:
             raise ValueError(f"no ego sample close to timestamp {timestamp}")
         selected.append(rows[closest])
     center = selected[history_steps - 1]

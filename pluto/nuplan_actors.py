@@ -1,6 +1,6 @@
 """Bounded, read-only nuPlan ego and tracked-object SQLite extraction."""
 
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 import math
 from pathlib import Path
 import sqlite3
@@ -25,7 +25,7 @@ def read_ego_and_actors(
     """Extract actors present now and their nearby history/targets in the ego frame.
 
     Database timestamps use microseconds. Track selection uses current-frame
-    positions only; future boxes are used solely for prediction targets. Raw
+    positions at or before the planning timestamp; future boxes are used solely for prediction targets. Raw
     lidar boxes are in the map frame, whereas ego velocities are body-frame.
     This omits lane maps, route, reference lines, causal labels and the official
     devkit's interpolation/filtering; it is a bounded diagnostic adapter.
@@ -43,12 +43,8 @@ def read_ego_and_actors(
     end = center_timestamp + future_steps * interval_us + tolerance
     with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as connection:
         ego = connection.execute(
-            "SELECT timestamp,x,y,qw,qx,qy,qz FROM ego_pose WHERE timestamp BETWEEN ? AND ? ORDER BY ABS(timestamp - ?), timestamp LIMIT 1",
-            (
-                center_timestamp - tolerance,
-                center_timestamp + tolerance,
-                center_timestamp,
-            ),
+            "SELECT timestamp,x,y,qw,qx,qy,qz FROM ego_pose WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp DESC LIMIT 1",
+            (center_timestamp - tolerance, center_timestamp),
         ).fetchone()
         frames = connection.execute(
             "SELECT token,timestamp FROM lidar_pc WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp",
@@ -61,14 +57,18 @@ def read_ego_and_actors(
         for i in range(-(history_steps - 1), future_steps + 1):
             target = center_timestamp + i * interval_us
             ix = bisect_left(times, target)
-            choices = [j for j in (ix - 1, ix) if 0 <= j < len(frames)]
-            if not choices:
-                chosen.append(None)
-                continue
-            closest = min(choices, key=lambda j: abs(times[j] - target))
+            if i <= 0:
+                closest = bisect_right(times, target) - 1
+            else:
+                choices = [j for j in (ix - 1, ix) if 0 <= j < len(frames)]
+                closest = (
+                    min(choices, key=lambda j: abs(times[j] - target))
+                    if choices
+                    else -1
+                )
             chosen.append(
                 frames[closest][0]
-                if abs(times[closest] - target) <= tolerance
+                if closest >= 0 and abs(times[closest] - target) <= tolerance
                 else None
             )
         tokens = list(dict.fromkeys(token for token in chosen if token is not None))

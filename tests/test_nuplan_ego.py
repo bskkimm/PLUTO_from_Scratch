@@ -61,3 +61,31 @@ def test_ego_coordinates_rotate_global_path_into_heading_frame(tmp_path):
         batch["target"][0, :, 0], torch.tensor([0.1, 0.2, 0.3, 0.4]), atol=1e-6
     )
     assert torch.allclose(batch["target"][0, :, 1], torch.zeros(4), atol=1e-6)
+
+
+def test_current_ego_state_never_uses_future_sample(tmp_path):
+    path = tmp_path / "causal-ego.db"
+    connection = sqlite3.connect(path)
+    connection.execute(
+        "create table ego_pose (timestamp integer, x real, y real, qw real, qx real, qy real, qz real, vx real, vy real, acceleration_x real)"
+    )
+    for i in range(10):
+        if i != 3:
+            connection.execute(
+                "insert into ego_pose values (?,?,?,?,?,?,?,?,?,?)",
+                (i * 100000, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+            )
+    connection.execute(
+        "insert into ego_pose values (?,?,?,?,?,?,?,?,?,?)",
+        (250000, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0),
+    )
+    connection.execute(
+        "insert into ego_pose values (?,?,?,?,?,?,?,?,?,?)",
+        (300001, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0),
+    )
+    connection.commit()
+    connection.close()
+    batch = read_ego_only(
+        path, center_timestamp=300000, history_steps=3, future_steps=4
+    )
+    assert batch["ego_state"][0, 3] == 2.0

@@ -1,0 +1,74 @@
+{
+  "code_base_revision": "f3a3d21eea04879790c2fcd36b3b59b07664ea26",
+  "code_dirty": true,
+  "python": "3.11.14",
+  "torch": "2.9.1+cu130",
+  "model_config": {
+    "dim": 16,
+    "heads": 4,
+    "encoder_layers": 1,
+    "decoder_layers": 1,
+    "modes": 3,
+    "future_steps": 80,
+    "dropout": 0.0,
+    "state_dropout": 0.75
+  },
+  "map_libraries": {
+    "pyproj": "3.6.1",
+    "shapely": "2.0.7"
+  },
+  "source_sha256": {
+    "pluto/model.py": "2bccbfa715929a124ced64541511700c431722338f2f28ee174c486048234f5c",
+    "pluto/data.py": "bfa57541f6edf12b75a3e3a08438dde8b5446034d9fde2332118578c7626a120",
+    "pluto/losses.py": "53644ea6fe3cec1feb7e94011c30869a3f50d3472c3f8f8a9afa4458c08a0e0f",
+    "pluto/nuplan_ego.py": "0bd21ed0540664b1696bba338ce843bcc218f65444f074f58ef16cf75b63d6ad",
+    "pluto/nuplan_actors.py": "9d44fcb835b81473bde306a80b0e9093f267660c15e6892e28ed3759bb60bc44",
+    "pluto/nuplan_map.py": "21c3ccbc6c652352b7d3331783430bbb2c38341c0e153cb0518feffd8ba4bf1d",
+    "scripts/probe_nuplan_ego.py": "f4dd906fc0e96ab51acb894644a463e33c36bbcb6896aba4037a944fd5e23a19"
+  },
+  "database_basename": "2021.10.11.07.12.18_veh-50_00211_00304.db",
+  "database_sha256": "6f8447645ad6c564fb6624262d2b64f03e73bf85237f6b1932a8253f76092851",
+  "center_timestamp_requested_us": 1633936730608492,
+  "history_samples": 21,
+  "future_samples": 80,
+  "seed": 123,
+  "device": "cpu",
+  "weights": "random",
+  "features": "ego, optional actors, and heuristically connected route references",
+  "map_basename": "map.gpkg",
+  "map_version_directory": "9.17.1964",
+  "map_sha256": "4062b83dda3e616897a0378fa61b91122ae6f0343187e871adb92f74426dc9a3",
+  "map_count": 31,
+  "reference_count": 4,
+  "reference_lengths_m": [
+    119.99614715576172,
+    119.99703216552734,
+    119.9972152709961,
+    119.99796295166016
+  ],
+  "on_route_map_count": 4,
+  "actor_count": 4,
+  "static_count": 9,
+  "selected_shape": [
+    1,
+    80,
+    6
+  ],
+  "candidate_shape": [
+    1,
+    4,
+    3,
+    80,
+    6
+  ],
+  "finite_output": true,
+  "optimization_step": {
+    "steps": 1,
+    "finite_loss": true,
+    "finite_gradients": true,
+    "loss": 87.59283447265625,
+    "gradient_norm": 3.818650007247925,
+    "meaning": "randomly initialized single-batch diagnostic, not a planning metric"
+  },
+  "limitation": "read-only data integration diagnostic with optional one-step update; reference paths use heuristic lane connectivity, not the official reference builder; not full training, official nuPlan evaluation, or planning-quality evidence"
+}

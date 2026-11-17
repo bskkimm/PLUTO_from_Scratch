@@ -1,0 +1,55 @@
+{
+  "effective_batch_size": 2,
+  "fixture": "synthetic smoke FP32",
+  "tuner_sha256": "776382e7c29b16706b7dc13e921a1cd86d744491dcc4aa40d6552604f33382c6",
+  "iterations": 8,
+  "warmup_steps": 3,
+  "repeats": 3,
+  "max_seconds": 20.0,
+  "deadline_scope": "checked between trials",
+  "trials": [
+    {
+      "threads": 1,
+      "accepted": true,
+      "peak_process_rss_kib_linux": 629272,
+      "samples_per_second": [
+        210.66452836710243,
+        211.44971391123568,
+        215.9212998228481
+      ],
+      "median_samples_per_second": 211.44971391123568,
+      "reason": "baseline"
+    },
+    {
+      "threads": 2,
+      "accepted": true,
+      "peak_process_rss_kib_linux": 631064,
+      "samples_per_second": [
+        207.80479753671543,
+        208.89667707046232,
+        208.98294923735327
+      ],
+      "median_samples_per_second": 208.89667707046232,
+      "reason": "correct but no proven gain over selected baseline"
+    }
+  ],
+  "selected_threads": 1,
+  "selection": "baseline unless correctness and >=5% median end-to-end gain are measured",
+  "environment": {
+    "python": "3.11.14",
+    "torch": "2.9.1+cu130",
+    "cpu_model": "Intel(R) Core(TM) i9-14900K",
+    "code_base_revision": "16678d629d7d2a9110a57ca5289cf14c362153f1",
+    "code_dirty": true,
+    "source_sha256": {
+      "pluto/model.py": "2bccbfa715929a124ced64541511700c431722338f2f28ee174c486048234f5c",
+      "pluto/losses.py": "53644ea6fe3cec1feb7e94011c30869a3f50d3472c3f8f8a9afa4458c08a0e0f",
+      "pluto/synthetic.py": "a89ad0da7929d9fdf95a05827278dd302bbc8d0c0e3b4dd83da993c3d231018e",
+      "pluto/recipes.py": "df0912d6505c205af56f847877477a14b65de2e42ac18962fb1ec021beb02f95",
+      "pluto/benchmark.py": "317dbc3d4e4ccb7c9145c3aa870001897aa6453a4fc8afa56fab5c9bd40288c8"
+    },
+    "dataset": "generated synthetic samples; no disk cache",
+    "device": "cpu"
+  },
+  "elapsed_seconds": 1.5771292940044077
+}

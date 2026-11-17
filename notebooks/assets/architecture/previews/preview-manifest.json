@@ -1,0 +1,57 @@
+{
+  "cairo_version": "1.16.0",
+  "figures": {
+    "bicycle.svg": {
+      "png_sha256": "7a1eb2a685c61212d5c852f2cdcfe775d3deb3a071d1bb6e1a4efe71c69bd882",
+      "svg_sha256": "72ab587013fa6a3a3be9ea2f956da1ac148da7d11082c90877816f4fcaba18e1"
+    },
+    "checkpoint.svg": {
+      "png_sha256": "fc45adf2f34ec183d66a311025293bd8fa5a2b9eec622c00adeaac84349b1e3e",
+      "svg_sha256": "3e84e2e0e429d1f3fed8a130706a7de106a248bb42ff1b956d693fe79a32e70e"
+    },
+    "contrastive.svg": {
+      "png_sha256": "8d4d6bd27448687f0c5a64b5f0e83a30e3c42a34eb23846d9f3854f872677336",
+      "svg_sha256": "8380e8492c5121429d63d1f46be9058604df3d859ae2b6e96489370bac2879c6"
+    },
+    "data-flow.svg": {
+      "png_sha256": "65057bc1e5cf0cbabf3999bef9c28962f232ad119f9af58030cfd2b6b1aa59a1",
+      "svg_sha256": "00c0e2fe90bb4dee47a136fc0982d5cfb58c3e028730532baa2788dfc3a8fefe"
+    },
+    "history-pyramid.svg": {
+      "png_sha256": "d32c71875cf0aa025768f528af694a73f50e746d4e941ba72cb3ff3500523269",
+      "svg_sha256": "d02334b6639f509a11a0b4e9ddd80d5d29254a6c48c42a439ab02576d0fdc132"
+    },
+    "inference.svg": {
+      "png_sha256": "397fa4a6b4be7ceb58a118fc882f6cc380f971dc1788f58454851db650c5587a",
+      "svg_sha256": "87c6e34cab8d87901549b7e708002d8b13c7cb0ea0c973167ebeb32afc4e94ee"
+    },
+    "loss.svg": {
+      "png_sha256": "09aefb7017290878395eee2e86a4fc7a6f43a20379b12b61f8287caa65a508a5",
+      "svg_sha256": "0892c83ad62e2c037266cea36eabc7c43c7d2515c359f3493f8778d162785c2c"
+    },
+    "optimizer.svg": {
+      "png_sha256": "f3a1b4e96e240fa480e397b7f35fd7adb1c0f206587a3109e2e2bdf6544060b7",
+      "svg_sha256": "a14349b92534a6a9b9d4c226d607d0da2104fde58a7224fd5ae37dc3e8658580"
+    },
+    "overview.svg": {
+      "png_sha256": "50137d2618b135137521509c186f7ef2b647526f05ee9909151e9f177600609f",
+      "svg_sha256": "93141e6e99e313a9255c665560905a578bf3ab7cca4685215a68a39946227814"
+    },
+    "query-grid.svg": {
+      "png_sha256": "9ec425f95081c1b9b3567ebd17af2758481b26fb62ed92dace491cf201ae62c5",
+      "svg_sha256": "e803a7302b8af4cb5275d17ea13c0a5c66ce5b758a5d1d895ba415730c103d90"
+    },
+    "scene-tokens.svg": {
+      "png_sha256": "706d149b175271ec856dce4f7e2d31d23f606b9dbef6d4b8fe885e54db757d0c",
+      "svg_sha256": "3cd822a0d4e4891c2540b633a84d6725fbada0df1a89ba8580b3c2bf9692b54d"
+    },
+    "shapes.svg": {
+      "png_sha256": "1589b311ec7d59da2cc22dff0c051748502ce2b4775f099bd2d9cc399148c15d",
+      "svg_sha256": "d87e2f711109929eea90bcb49062c28f2afb3041e7a0e97dda02568c56d1c52e"
+    }
+  },
+  "font": "DejaVuSans.ttf",
+  "font_sha256": "690243adfefe0ce154b547db6205794bd30ac4277275179517a90994f4980648",
+  "librsvg_version": "2.52.5+dfsg-3ubuntu0.2",
+  "renderer": "librsvg + Cairo"
+}

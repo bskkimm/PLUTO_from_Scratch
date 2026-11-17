@@ -1,0 +1,50 @@
+{
+  "kind": "nuplan_single_window_raster_training_diagnostic",
+  "manifest_sha256": "30c748c38c32984f9937c76539b157daa53c4743802ac8dcc7f6cda67dffb9ed",
+  "checkpoint_sha256": "09ec83cec5a295ad0db7920c7d031bb3292c2f1709bc213d883ffa6dc8049464",
+  "data_provenance": {
+    "future_samples": 80,
+    "history_samples": 21,
+    "interval_us": 100000,
+    "kind": "nuplan-heuristic-single-window-v1",
+    "limitations": "heuristic reference paths; no official feature-builder parity",
+    "log_basename": "2021.10.11.07.12.18_veh-50_00211_00304.db",
+    "log_sha256": "6f8447645ad6c564fb6624262d2b64f03e73bf85237f6b1932a8253f76092851",
+    "map_sha256": "4062b83dda3e616897a0378fa61b91122ae6f0343187e871adb92f74426dc9a3",
+    "map_version": "9.17.1964",
+    "modes": 6,
+    "raster_resolution_m": 0.2,
+    "rasterized_current_scene": true,
+    "timestamp_us": 1633936730608492
+  },
+  "dataset_split": "mini-diagnostic",
+  "seed": 123,
+  "recipe": "practical",
+  "completed_epochs": 1,
+  "optimizer_steps": 1,
+  "precision": "fp32",
+  "device": "cpu",
+  "raster_shape": [
+    1,
+    500,
+    500
+  ],
+  "drivable_cells": 23276,
+  "obstacle_cells": 317,
+  "artifact_storage": "/tmp/pluto-prepared-raster-v2 and /tmp/pluto-prepared-raster-run-v2; temporary and not committed",
+  "code_base_revision": "5402df5",
+  "code_dirty": true,
+  "source_sha256": {
+    "pluto/prepare.py": "4f4f2b91699d4fd2ef948506d00b2c62d5f169250224616cae623b6eb660fb3d",
+    "pluto/nuplan_map.py": "f0a1a9b8eb96121553f57aa486dc1fe47ec71ff10dfe30b15c382f59a4f588b2",
+    "pluto/raster.py": "585bad9d0d73ca62d6472a5e5679d65ca84b9ac7c67498c42a4d294e8ad9d85a",
+    "pluto/costmap.py": "6c3e8841d9176a0451b9ebd51541f3200a7e516343ff8066fdc48e0a302900f2",
+    "pluto/nuplan_actors.py": "9d44fcb835b81473bde306a80b0e9093f267660c15e6892e28ed3759bb60bc44",
+    "pluto/nuplan_ego.py": "0bd21ed0540664b1696bba338ce843bcc218f65444f074f58ef16cf75b63d6ad",
+    "pluto/train.py": "a963baa673906d2ee347165152bdc8147c9ad869ac34d26ef98ed6d7d3caf7b1",
+    "pluto/model.py": "2bccbfa715929a124ced64541511700c431722338f2f28ee174c486048234f5c",
+    "pluto/losses.py": "53644ea6fe3cec1feb7e94011c30869a3f50d3472c3f8f8a9afa4458c08a0e0f",
+    "pluto/augmentation.py": "e6021ba29b538cf5f0f643e1a1daec492688c59a8e497e794a56f3d78d18c2e5"
+  },
+  "limitations": "one random-initialized optimization step; raster uses present object boxes, heuristic reference paths and local map polygons; no official builder or closed-loop parity"
+}

@@ -1,0 +1,16 @@
+{
+  "devkit_revision": "7814310e0bd65c6e21f06b81eedfec2ac9a06aa9",
+  "devkit_checkout_dirty": true,
+  "devkit_gpkg_mapsdb_sha256": "f8e200475596b4a4c7ba7a5ada9bf8a26d99024bf1817bb5a86d3d07d82f70e1",
+  "map_sha256": "4062b83dda3e616897a0378fa61b91122ae6f0343187e871adb92f74426dc9a3",
+  "log_sha256": "6f8447645ad6c564fb6624262d2b64f03e73bf85237f6b1932a8253f76092851",
+  "location": "sg-one-north",
+  "map_version": "9.17.1964",
+  "requested_timestamp_us": 1633936730608492,
+  "selected_timestamp_us": 1633936730608837,
+  "radius_m": 120.0,
+  "projected_crs": "epsg:32648",
+  "baseline_count": 31,
+  "max_hausdorff_distance_m": 0.0,
+  "limitation": "Geometry projection only; this does not validate route generation or planning. The devkit checkout was dirty, so the revision alone does not fully identify its source."
+}

@@ -1,0 +1,141 @@
+{
+  "figures": [
+    {
+      "id": "intro",
+      "attachment": "overview.svg",
+      "mime_type": "image/svg+xml",
+      "question": "How does a scene become a selected plan?",
+      "caption": "A driving scene is converted to vector tokens, decoded into candidates, then selected; the pink branch shows training supervision.",
+      "source_module": "pluto/model.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "93141e6e99e313a9255c665560905a578bf3ab7cca4685215a68a39946227814"
+    },
+    {
+      "id": "data",
+      "attachment": "data-flow.svg",
+      "mime_type": "image/svg+xml",
+      "question": "Which adjacent history pairs remain valid?",
+      "caption": "A missing observation invalidates both adjacent pairs. Future labels remain separate from the historical inputs.",
+      "source_module": "pluto/data.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "00c0e2fe90bb4dee47a136fc0982d5cfb58c3e028730532baa2788dfc3a8fefe"
+    },
+    {
+      "id": "history",
+      "attachment": "history-pyramid.svg",
+      "mime_type": "image/svg+xml",
+      "question": "How do short and long temporal contexts combine?",
+      "caption": "Three temporal scales exchange context through projection, linear upsampling and addition; a 5-by-5 mask shows a window of three.",
+      "source_module": "pluto/model.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "d02334b6639f509a11a0b4e9ddd80d5d29254a6c48c42a439ab02576d0fdc132"
+    },
+    {
+      "id": "scene",
+      "attachment": "scene-tokens.svg",
+      "mime_type": "image/svg+xml",
+      "question": "How do different object types share a feature width?",
+      "caption": "An analytical max-pool, geometric Fourier address and typed scene-token sequence illustrate the three representation steps.",
+      "source_module": "pluto/model.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "3cd822a0d4e4891c2540b633a84d6725fbada0df1a89ba8580b3c2bf9692b54d"
+    },
+    {
+      "id": "arch",
+      "attachment": "query-grid.svg",
+      "mime_type": "image/svg+xml",
+      "question": "Which queries interact in each attention stage?",
+      "caption": "Reference attention connects rows, mode attention connects columns, and cross-attention reads valid scene tokens.",
+      "source_module": "pluto/model.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "e803a7302b8af4cb5275d17ea13c0a5c66ce5b758a5d1d895ba415730c103d90"
+    },
+    {
+      "id": "assembly",
+      "attachment": "shapes.svg",
+      "mime_type": "image/svg+xml",
+      "question": "Where do the batch, route, mode and time axes go?",
+      "caption": "One highlighted query produces a 4-by-6 plan; classification selects among six candidates or falls back to the free head.",
+      "source_module": "pluto/model.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "d87e2f711109929eea90bcb49062c28f2afb3041e7a0e97dda02568c56d1c52e"
+    },
+    {
+      "id": "objective",
+      "attachment": "loss.svg",
+      "mime_type": "image/svg+xml",
+      "question": "How does distance to unsafe space penalize a plan?",
+      "caption": "Vehicle circle centers sample a distance field. The single-circle example gives max(0,1.0+0.2\u22120.7)=0.5 metres.",
+      "source_module": "pluto/losses.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "0892c83ad62e2c037266cea36eabc7c43c7d2515c359f3493f8778d162785c2c"
+    },
+    {
+      "id": "optimization",
+      "attachment": "optimizer.svg",
+      "mime_type": "image/svg+xml",
+      "question": "What happens between a loss and a parameter update?",
+      "caption": "A Smooth L1 example explains the gradient direction; the adjacent sequence follows the notebook's actual AdamW call order.",
+      "source_module": "pluto/losses.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "a14349b92534a6a9b9d4c226d607d0da2104fde58a7224fd5ae37dc3e8658580"
+    },
+    {
+      "id": "cil",
+      "attachment": "contrastive.svg",
+      "mime_type": "image/svg+xml",
+      "question": "Which changed views can still use their old targets?",
+      "caption": "All views share an encoder. Only original and positive views are decoded for supervision; the negative contributes to contrastive learning.",
+      "source_module": "pluto/objective.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "8380e8492c5121429d63d1f46be9058604df3d859ae2b6e96489370bac2879c6"
+    },
+    {
+      "id": "evaluation",
+      "attachment": "inference.svg",
+      "mime_type": "image/svg+xml",
+      "question": "How are selection and geometric error different?",
+      "caption": "Toy logits select candidate zero; a separate two-point example computes ADE=(0+1)/2=0.5 metres.",
+      "source_module": "pluto/planner.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "87c6e34cab8d87901549b7e708002d8b13c7cb0ea0c973167ebeb32afc4e94ee"
+    },
+    {
+      "id": "simulation",
+      "attachment": "bicycle.svg",
+      "mime_type": "image/svg+xml",
+      "question": "How does a controller track a reference plan?",
+      "caption": "Wheelbase and steering define the bicycle update. A 0.1-second straight step at 1 m/s advances by exactly 0.1 metres.",
+      "source_module": "pluto/simulation.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "72ab587013fa6a3a3be9ea2f956da1ac148da7d11082c90877816f4fcaba18e1"
+    },
+    {
+      "id": "checkpoint",
+      "attachment": "checkpoint.svg",
+      "mime_type": "image/svg+xml",
+      "question": "What must match before training can resume?",
+      "caption": "Training state is written to a temporary file and atomically replaced; configuration, data and implementation hashes guard resume.",
+      "source_module": "pluto/train.py",
+      "method": "Editable deterministic SVG; overview includes retained generated conceptual artwork",
+      "sha256": "3e84e2e0e429d1f3fed8a130706a7de106a248bb42ff1b956d693fe79a32e70e"
+    }
+  ],
+  "sources": {
+    "pluto/model.py": "2bccbfa715929a124ced64541511700c431722338f2f28ee174c486048234f5c",
+    "pluto/losses.py": "53644ea6fe3cec1feb7e94011c30869a3f50d3472c3f8f8a9afa4458c08a0e0f",
+    "pluto/objective.py": "97b22c12a5966532b67823105949a642b0f1f53a7e87f2c4d90e7e84acd8d70d",
+    "pluto/simulation.py": "ec0941002f62228626e4784a10c1b6131b116086b6cc7dbdb8fe5aed59ab1272",
+    "pluto/synthetic.py": "a89ad0da7929d9fdf95a05827278dd302bbc8d0c0e3b4dd83da993c3d231018e",
+    "scripts/make_notebook.py": "46485b865d3ed0b36df9c4b8ebe840a2d0cb9c9da89c21646270f2786f2817ad",
+    "scripts/notebook_figures.py": "3d2d7aeef9d3be366c137fc0cf154c3e551e324a01b79835b5d6f54785713a92",
+    "scripts/render_figures.py": "7ff6ea136dbb88b2e99f4c06078596393360e5f26ea093403f9e2aa9be07d411",
+    "pluto/data.py": "bfa57541f6edf12b75a3e3a08438dde8b5446034d9fde2332118578c7626a120",
+    "pluto/planner.py": "5134461a57a85edeea8bfab946736a0dab1a38d3122ac629487f710e55c58d91",
+    "pluto/train.py": "148081e9ea6124a6762e74bd6fb40fb70a7f5438aaaa07f97c5843aa4653e13f",
+    "notebooks/assets/illustrations/pluto-scene-to-plan.png": "5cbb03005d2bd2e6dcd68026fb336c5d416a5f35945fbeb8e134a7af6f7089b4",
+    "notebooks/assets/illustrations/provenance.json": "79079df93a8dc20c8de30949beff5712b16b2015bb59d5e0f31605b833f3733f"
+  },
+  "generation": "python scripts/make_notebook.py",
+  "inspection": "See inspection.md for individual visual inspection and remaining limits."
+}

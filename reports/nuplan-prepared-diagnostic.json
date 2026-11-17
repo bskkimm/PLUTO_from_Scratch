@@ -1,0 +1,29 @@
+{
+  "kind": "nuplan_single_window_prepared_training_diagnostic",
+  "manifest_sha256": "47a9e524af816f2c2a6f892a136ac41f426b6a234562515497552eb42f276696",
+  "checkpoint_sha256": "2d93829cc23a9f3f3a76b90c7323f5ef55a2311e8f488c1627be4f7227407d48",
+  "dataset_split": "mini-diagnostic",
+  "train_and_evaluation_same_window": true,
+  "seed": 123,
+  "recipe": "practical",
+  "completed_epochs": 1,
+  "optimizer_steps": 1,
+  "precision": "fp32",
+  "device": "cpu",
+  "selected_ade_m": 30.755694580078124,
+  "metric_scope": "same-window diagnostic only; not nuPlan closed-loop score",
+  "artifact_storage": "/tmp/pluto-prepared-nuplan-v1 and /tmp/pluto-prepared-run-v1; temporary and not committed",
+  "code_base_revision": "f3a3d21eea04879790c2fcd36b3b59b07664ea26",
+  "code_dirty": true,
+  "source_sha256": {
+    "pluto/prepare.py": "f34721a8251a3ec07b8dca38f18f367e0d5c15ac79558b2e948a2c6a2fa8f270",
+    "pluto/nuplan_ego.py": "0bd21ed0540664b1696bba338ce843bcc218f65444f074f58ef16cf75b63d6ad",
+    "pluto/nuplan_actors.py": "9d44fcb835b81473bde306a80b0e9093f267660c15e6892e28ed3759bb60bc44",
+    "pluto/nuplan_map.py": "21c3ccbc6c652352b7d3331783430bbb2c38341c0e153cb0518feffd8ba4bf1d",
+    "pluto/train.py": "c3061f72b2f002a4db2183e2d31acdc1c4102c242ba207768d154fccac06580b",
+    "pluto/evaluate.py": "6d18d5aa31e1531913acbec122a7b1c3e75e1f8e90ab427523007aea7fc96f62",
+    "pluto/model.py": "2bccbfa715929a124ced64541511700c431722338f2f28ee174c486048234f5c",
+    "pluto/losses.py": "53644ea6fe3cec1feb7e94011c30869a3f50d3472c3f8f8a9afa4458c08a0e0f"
+  },
+  "limitations": "one random-initialized optimization step; heuristic connected reference paths; no official builder or scorer parity"
+}

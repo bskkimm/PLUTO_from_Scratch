@@ -1,0 +1,1 @@
+{"dataset":"synthetic-v1","batch_size":2,"epochs":3,"seed":123,"dim":16,"heads":4,"encoder_layers":1,"decoder_layers":1,"modes":3,"future_steps":4,"lr":0.001}

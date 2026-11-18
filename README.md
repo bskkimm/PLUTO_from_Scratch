@@ -6,7 +6,7 @@ The planner encodes vectorized agents, map polylines and static objects with pos
 
 ![Illustrated PLUTO scene-to-plan walkthrough](notebooks/assets/architecture/previews/overview.png)
 
-The [illustrated notebook](notebooks/pluto_e2e_walkthrough.ipynb) includes 12 self-contained figures: a generated driving-scene overview, motion masks, temporal attention, scene tokens, factorized queries, tensor shapes, circle-based distance costs, gradients, contrastive scenes, candidate selection, vehicle tracking and checkpoint recovery. Each worked example sits beside its explanation and code. Editable figure sources, PNG previews and the generation prompt are included in [the figure inventory](notebooks/assets/architecture/README.md).
+The [illustrated notebook](notebooks/pluto_e2e_walkthrough.ipynb) includes 12 figures: a generated driving-scene overview, motion masks, temporal attention, scene tokens, factorized queries, tensor shapes, circle-based distance costs, gradients, contrastive scenes, candidate selection, vehicle tracking and checkpoint recovery. It links to repository PNG files so images display in GitHub's notebook viewer. Download the [self-contained offline edition](notebooks/pluto_e2e_walkthrough_offline.ipynb) when copying the notebook without its asset directory. Both editions have identical code and lesson content. Each worked example sits beside its explanation and code. Editable figure sources, PNG previews and the generation prompt are included in [the figure inventory](notebooks/assets/architecture/README.md).
 
 ## Quick start
 

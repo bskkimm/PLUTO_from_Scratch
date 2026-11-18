@@ -1,6 +1,6 @@
 # Figure inventory
 
-Exactly 12 distinct instructional figures are embedded as self-contained SVG attachments. The opening figure includes generated conceptual artwork; all computational layers, geometry, labels and dependencies remain editable in `scripts/notebook_figures.py`. The generated artwork and its exact prompt are retained in `../illustrations/`.
+Exactly 12 distinct instructional figures are provided in two generated editions. `notebooks/pluto_e2e_walkthrough.ipynb` uses relative PNG links for GitHub and local repository viewing. `notebooks/pluto_e2e_walkthrough_offline.ipynb` embeds self-contained SVG attachments for use when copied alone. Their code cells and lesson content are identical. The opening figure includes generated conceptual artwork; all computational layers, geometry, labels and dependencies remain editable in `scripts/notebook_figures.py`. The generated artwork and its exact prompt are retained in `../illustrations/`.
 
 | Figure | Cell anchor | Learning question | Source |
 | --- | --- | --- | --- |

@@ -41,7 +41,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install ruff==0.15.21
-      - run: ruff check pluto scripts tests notebooks/pluto_e2e_walkthrough.ipynb
+      - run: ruff check pluto scripts tests notebooks/*.ipynb
       - run: ruff format --check pluto scripts tests
       - run: python scripts/check_notebook.py
   package:

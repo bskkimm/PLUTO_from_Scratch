@@ -66,3 +66,24 @@ def test_notebook_integrity_rejects_modified_preview(tmp_path):
     preview.write_bytes(preview.read_bytes() + b"changed")
     with pytest.raises(ValueError, match="preview"):
         verify_notebook(tmp_path)
+
+
+def test_web_notebook_rejects_attachment_only_images(tmp_path):
+    import shutil
+    import pytest
+    from scripts.check_notebook import verify_notebook
+
+    for name in ("pluto", "notebooks", "scripts"):
+        shutil.copytree(name, tmp_path / name)
+    path = tmp_path / "notebooks/pluto_e2e_walkthrough.ipynb"
+    notebook = json.loads(path.read_text())
+    intro = notebook["cells"][0]
+    intro["source"] = [
+        line.replace(
+            "assets/architecture/previews/overview.png", "attachment:overview.svg"
+        )
+        for line in intro["source"]
+    ]
+    path.write_text(json.dumps(notebook))
+    with pytest.raises(ValueError, match="web notebook image"):
+        verify_notebook(tmp_path)

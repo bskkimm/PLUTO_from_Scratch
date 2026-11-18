@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from copy import deepcopy
 from pathlib import Path
 from notebook_figures import INVENTORY, draw
 
@@ -246,6 +247,8 @@ manifest = {
         {
             "id": cell["id"],
             "attachment": list(cell["attachments"])[0],
+            "web_image": "assets/architecture/previews/"
+            + Path(list(cell["attachments"])[0]).with_suffix(".png").name,
             "mime_type": "image/svg+xml",
             "question": INVENTORY[Path(list(cell["attachments"])[0]).stem][1],
             "caption": INVENTORY[Path(list(cell["attachments"])[0]).stem][3],
@@ -281,7 +284,7 @@ manifest = {
 }
 (ASSETS / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 (ASSETS / "README.md").write_text(
-    "# Figure inventory\n\nExactly 12 distinct instructional figures are embedded as self-contained SVG attachments. The opening figure includes generated conceptual artwork; all computational layers, geometry, labels and dependencies remain editable in `scripts/notebook_figures.py`. The generated artwork and its exact prompt are retained in `../illustrations/`.\n\n"
+    "# Figure inventory\n\nExactly 12 distinct instructional figures are provided in two generated editions. `notebooks/pluto_e2e_walkthrough.ipynb` uses relative PNG links for GitHub and local repository viewing. `notebooks/pluto_e2e_walkthrough_offline.ipynb` embeds self-contained SVG attachments for use when copied alone. Their code cells and lesson content are identical. The opening figure includes generated conceptual artwork; all computational layers, geometry, labels and dependencies remain editable in `scripts/notebook_figures.py`. The generated artwork and its exact prompt are retained in `../illustrations/`.\n\n"
     "| Figure | Cell anchor | Learning question | Source |\n| --- | --- | --- | --- |\n"
     + "\n".join(
         f"| {fid} | `{anchor}` | {question} | `{source}` |"
@@ -303,6 +306,16 @@ nb = {
     "nbformat": 4,
     "nbformat_minor": 5,
 }
-(ROOT / "notebooks/pluto_e2e_walkthrough.ipynb").write_text(
+(ROOT / "notebooks/pluto_e2e_walkthrough_offline.ipynb").write_text(
     json.dumps(nb, indent=1) + "\n"
+)
+web_notebook = deepcopy(nb)
+for cell in web_notebook["cells"]:
+    for attachment in cell.pop("attachments", {}):
+        preview = f"assets/architecture/previews/{Path(attachment).stem}.png"
+        cell["source"] = [
+            line.replace(f"attachment:{attachment}", preview) for line in cell["source"]
+        ]
+(ROOT / "notebooks/pluto_e2e_walkthrough.ipynb").write_text(
+    json.dumps(web_notebook, indent=1) + "\n"
 )

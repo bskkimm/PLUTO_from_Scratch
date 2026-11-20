@@ -24,4 +24,5 @@ Use a new output directory for each run, or add `--resume` to continue a compati
 - [Self-contained offline notebook](notebooks/pluto_e2e_walkthrough_offline.ipynb) — the same lesson with embedded images.
 - [Command guide](COMMAND_GUIDE.md) — training, evaluation, data preparation, and optional features.
 - [Paper-to-code mapping](docs/paper-to-code.md) — implementation details and deviations.
+- [Implementation review](docs/implementation-review.md) — source audit, fixes, and remaining gaps.
 - [Paper brief](docs/paper-brief.md) — sources, validation scope, and remaining work.

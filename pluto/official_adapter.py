@@ -10,15 +10,29 @@ from .data import agent_history_features
 
 
 def convert_normalized_batch(
-    data, history_steps=21, future_steps=80, modes=12, radius=120.0
+    data,
+    history_steps=21,
+    future_steps=80,
+    modes=12,
+    radius=120.0,
+    *,
+    include_targets=True,
 ):
+    """Convert official normalized/collated tensors without mutating the input.
+
+    Training requires history plus future and reference projections for labels.
+    Set include_targets=False for inference: only history is read, no future
+    projection is required, and the returned batch contains no supervision keys.
+    Float inputs follow the official to_tensor convention (float32).
+    """
     if history_steps < 2 or future_steps < 1 or modes < 1 or radius <= 0:
         raise ValueError("invalid history, future, mode count or radius")
     agent, maps, static, ref = (
         data[k] for k in ("agent", "map", "static_objects", "reference_line")
     )
     h, t = history_steps, future_steps
-    if agent["position"].shape[2] < h + t:
+    required_steps = h + t if include_targets else h
+    if agent["position"].shape[2] < required_steps:
         raise ValueError("agent history/future is shorter than requested")
     agents, agent_mask = agent_history_features(
         agent["position"][:, :, :h],
@@ -50,33 +64,8 @@ def convert_normalized_batch(
     ref_pose = torch.cat((rpos[:, :, 0], ryaw[:, :, 0, None]), -1)
     static_pose = torch.cat((static["position"], static["heading"].unsqueeze(-1)), -1)
     static_features = torch.cat((static_pose, static["shape"]), -1)
-    future_pos = agent["position"][:, :, h : h + t] - agent["position"][:, :, h - 1 : h]
-    future_yaw = agent["heading"][:, :, h : h + t] - agent["heading"][:, :, h - 1 : h]
-    target = torch.cat(
-        (
-            future_pos,
-            torch.stack((future_yaw.cos(), future_yaw.sin()), -1),
-            agent["velocity"][:, :, h : h + t],
-        ),
-        -1,
-    )
-    future_valid = agent["valid_mask"][:, :, h : h + t]
     bs, r = rpos.shape[:2]
-    labels = torch.zeros(bs, dtype=torch.long, device=rpos.device)
-    if r:
-        valid_ref = ref["valid_mask"].any(-1)
-        projections = ref["future_projection"]
-        endpoint_index = (
-            (future_valid[:, 0].sum(-1) // 10)
-            .long()
-            .clamp(max=projections.shape[2] - 1)
-        )
-        projected = projections[torch.arange(bs, device=rpos.device), :, endpoint_index]
-        ref_index = projected[..., 1].masked_fill(~valid_ref, float("inf")).argmin(-1)
-        distance = projected[torch.arange(bs, device=rpos.device), ref_index, 0]
-        mode = (distance / (radius / modes)).long().clamp(0, modes - 1)
-        labels = ref_index * modes + mode
-    return {
+    batch = {
         "agents": agents,
         "agent_mask": agent_mask,
         "agent_pose": pose,
@@ -119,9 +108,39 @@ def convert_normalized_batch(
         "reference": reference,
         "reference_mask": ref["valid_mask"],
         "reference_pose": ref_pose,
-        "target": target[:, 0],
-        "target_mask": future_valid[:, 0],
-        "agent_target": target[:, 1:],
-        "agent_target_mask": future_valid[:, 1:],
-        "mode_label": labels,
     }
+    if not include_targets:
+        return batch
+    future_pos = agent["position"][:, :, h : h + t] - agent["position"][:, :, h - 1 : h]
+    future_yaw = agent["heading"][:, :, h : h + t] - agent["heading"][:, :, h - 1 : h]
+    target = torch.cat(
+        (
+            future_pos,
+            torch.stack((future_yaw.cos(), future_yaw.sin()), -1),
+            agent["velocity"][:, :, h : h + t],
+        ),
+        -1,
+    )
+    future_valid = agent["valid_mask"][:, :, h : h + t]
+    labels = torch.zeros(bs, dtype=torch.long, device=rpos.device)
+    if r:
+        valid_ref = ref["valid_mask"].any(-1)
+        projections = ref["future_projection"]
+        endpoint_index = (
+            (future_valid[:, 0].sum(-1) // 10)
+            .long()
+            .clamp(max=projections.shape[2] - 1)
+        )
+        projected = projections[torch.arange(bs, device=rpos.device), :, endpoint_index]
+        ref_index = projected[..., 1].masked_fill(~valid_ref, float("inf")).argmin(-1)
+        distance = projected[torch.arange(bs, device=rpos.device), ref_index, 0]
+        mode = (distance / (radius / modes)).long().clamp(0, modes - 1)
+        labels = ref_index * modes + mode
+    batch.update(
+        target=target[:, 0],
+        target_mask=future_valid[:, 0],
+        agent_target=target[:, 1:],
+        agent_target_mask=future_valid[:, 1:],
+        mode_label=labels,
+    )
+    return batch

@@ -12,7 +12,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from .losses import imitation_loss
 from .model import Pluto
-from .recipes import get_recipe
+from .recipes import get_recipe, make_optimizer
 from .synthetic import sample_batch
 
 
@@ -40,8 +40,9 @@ def benchmark(iterations=10, warmup=2, batch_size=2):
         num_workers=0,
     )
     cached = next(iter(loader))
-    model = Pluto(get_recipe("smoke").model)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    recipe = get_recipe("smoke")
+    model = Pluto(recipe.model)
+    optimizer = make_optimizer(model, recipe.learning_rate, recipe.weight_decay)
     startup = time.perf_counter() - init
 
     def update(batch):

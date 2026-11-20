@@ -162,7 +162,7 @@ code(
     "sdf-probe",
 )
 md(
-    "## Follow the gradient into an update\n\nFor a scalar prediction 0 and target 1, Smooth L1 is 0.5 and its derivative with respect to the prediction is −1. The full model has many coupled parameters; AdamW uses moving averages and weight decay. The illustrated scalar direction explains the gradient, not the size of an AdamW parameter update.\n",
+    "## Follow the gradient into an update\n\nFor a scalar prediction 0 and target 1, Smooth L1 is 0.5 and its derivative with respect to the prediction is −1. The full model has many coupled parameters; AdamW uses moving averages and weight decay. We import the shared optimizer helper as training infrastructure: it excludes biases, normalization weights and learned embeddings from decay, following the released trainer. Training also uses epoch-based warmup/cosine with a minimum learning rate of 1e-6. The illustrated scalar direction explains the gradient, not the size of an AdamW parameter update.\n",
     "optimization",
     "optimizer",
     "Smooth L1 gradient and AdamW step order",
@@ -172,7 +172,7 @@ code(
     "scalar-gradient",
 )
 code(
-    "optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)\nlosses = imitation_loss(out, batch)\noptimizer.zero_grad()\nlosses['total'].backward()\noptimizer.step()\nprint({k: round(v.item(), 4) for k, v in losses.items()})\n",
+    "from pluto.recipes import get_recipe, make_optimizer\nrecipe = get_recipe('smoke')\noptimizer = make_optimizer(model, recipe.learning_rate, recipe.weight_decay)\nlosses = imitation_loss(out, batch)\noptimizer.zero_grad()\nlosses['total'].backward()\noptimizer.step()\nprint({k: round(v.item(), 4) for k, v in losses.items()})\n",
     "update",
 )
 md(
@@ -275,6 +275,7 @@ manifest = {
             "pluto/data.py",
             "pluto/planner.py",
             "pluto/train.py",
+            "pluto/recipes.py",
             "notebooks/assets/illustrations/pluto-scene-to-plan.png",
             "notebooks/assets/illustrations/provenance.json",
         ]

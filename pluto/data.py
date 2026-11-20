@@ -8,7 +8,7 @@ def agent_history_features(position, velocity, heading, shape, valid):
 
     Inputs [B,A,H,2] positions (m), velocities (m/s), dimensions (m),
     headings [B,A,H] (rad), and valid observations [B,A,H]. The output
-    channels are dx,dy,dvx,dvy,cos(dheading),sin(dheading),length,width,
+    channels are dx,dy,dvx,dvy,cos(dheading),sin(dheading),width,length,
     pair-valid. A pair is valid only when both endpoints are valid.
     All inputs must already share the intended coordinate frame.
     """

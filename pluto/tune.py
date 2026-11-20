@@ -10,6 +10,7 @@ import torch
 from .benchmark import benchmark
 from .losses import imitation_loss
 from .model import Pluto, PlutoConfig
+from .recipes import get_recipe, make_optimizer
 from .synthetic import sample_batch
 
 
@@ -27,7 +28,8 @@ def _fixture():
     )
     model = Pluto(config)
     batch = sample_batch(2, 4, seed=42)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    recipe = get_recipe("smoke")
+    optimizer = make_optimizer(model, recipe.learning_rate, recipe.weight_decay)
     predictions, gradients, losses = None, None, []
     for step in range(3):
         optimizer.zero_grad()

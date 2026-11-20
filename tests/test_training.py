@@ -13,6 +13,15 @@ def test_epoch_resume_matches_uninterrupted(tmp_path):
     assert a["epoch"] == b["epoch"] == 3
     for key in a["model"]:
         assert torch.equal(a["model"][key], b["model"][key]), key
+    assert a["config"]["min_lr"] == 1e-6
+    assert a["config"]["optimizer_policy"] == "official-module-decay-v1"
+    assert a["scheduler"] == b["scheduler"]
+    assert a["optimizer"]["param_groups"] == b["optimizer"]["param_groups"]
+    assert len(a["optimizer"]["param_groups"]) == 2
+    assert all(g["lr"] == 1e-6 for g in a["optimizer"]["param_groups"])
+    for key, state in a["optimizer"]["state"].items():
+        for name, value in state.items():
+            assert torch.equal(value, b["optimizer"]["state"][key][name])
 
 
 def test_resume_rejects_changed_seed(tmp_path):

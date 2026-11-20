@@ -13,7 +13,7 @@ import platform
 import uuid
 import torch
 from .model import Pluto
-from .recipes import get_recipe, make_scheduler
+from .recipes import get_recipe, make_optimizer, make_scheduler
 from .dataset import BatchManifest
 from .costmap import signed_distance_field
 from .augmentation import make_causal_views, mask_agents, perturb_state
@@ -80,6 +80,8 @@ def run_training(
         "lr": settings.learning_rate,
         "weight_decay": settings.weight_decay,
         "warmup_epochs": settings.warmup_epochs,
+        "min_lr": settings.min_learning_rate,
+        "optimizer_policy": "official-module-decay-v1",
         "recipe": recipe,
         "accumulation_steps": accumulation_steps,
         "device": device,
@@ -113,10 +115,10 @@ def run_training(
     scaler = torch.amp.GradScaler(
         "cuda", enabled=(device == "cuda" and precision == "fp16")
     )
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=config["lr"], weight_decay=config["weight_decay"]
+    optimizer = make_optimizer(model, config["lr"], config["weight_decay"])
+    scheduler = make_scheduler(
+        optimizer, epochs, settings.warmup_epochs, min_lr=settings.min_learning_rate
     )
-    scheduler = make_scheduler(optimizer, epochs, settings.warmup_epochs)
     start = 0
     run_id = None
     first_started = datetime.now().astimezone()

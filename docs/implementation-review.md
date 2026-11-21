@@ -74,8 +74,9 @@ python scripts/run_notebook.py
    layout, query positional encoding, trajectory heads, pooling and PyTorch
    default initialization differ from the released implementation. Matching
    major dimensions does not imply operator or weight compatibility.
-3. **Objectives and causal views:** SDF normalization/boundary policies and
-   reference-free-head channels differ. Synthetic contrastive views do not
+3. **Objectives and causal views:** the default educational SDF loss and
+   reference-free-head channels differ. A released-style collision option is
+   now available as described below. Synthetic contrastive views do not
    establish causal validity on nuPlan scenes.
 4. **Planning and evaluation:** the educational tracker/rules are not the
    official PDM/nuPlan evaluator. Released checkpoints, exact train/validation
@@ -87,3 +88,23 @@ model review or complete shared-playbook CI compliance is claimed. Delivery of
 the current educational implementation follows the task-scoped authorization
 recorded in [the paper brief](paper-brief.md); remaining scientific gates stay
 open. See [the paper-to-code map](paper-to-code.md) for the full deviation table.
+
+## Follow-up: released-style collision loss
+
+The optional `released_sdf_loss` implements the [pinned upstream ESDF operator](https://github.com/jchengai/pluto/blob/b9964b649c660f1f4a971d614c66f5992e24c18a/src/models/pluto/loss/esdf_collision_loss.py),
+including three circle offsets from the rear axle, vehicle dimensions, the
+`align_corners=False` pixel mapping, strict 95% boundary, on-road origin check,
+and division by the number of active circles. `--collision-mode released`
+selects it for supervised and contrastive training when an SDF is present. The
+local objectives additionally mask invalid target steps and unsupervised rows;
+the released operator uses no such mask. The contrastive objective averages
+the two view losses separately, which can differ from pooling all active circles
+across views. The default `educational` option keeps the previous calculation.
+
+The actual pinned upstream module was loaded locally for a bounded float32 CPU
+comparison on seeded synthetic 100×100 and 101×97 fields, including off-road
+origins, varying headings and out-of-bounds positions. The largest absolute loss
+difference was `5.96e-8` and the maximum gradient difference was zero. Tests
+also cover hand-calculated constant fields, masks, empty active sets, gradients,
+both objectives and a prepared-data checkpoint resume. This verifies an operator
+on synthetic inputs, not official cost-map construction or nuPlan outcomes.

@@ -37,7 +37,10 @@ def run_training(
     device="cpu",
     precision="fp32",
     build_sdf=False,
+    collision_mode="educational",
 ):
+    if collision_mode not in ("educational", "released"):
+        raise ValueError("collision_mode must be educational or released")
     if device not in ("cpu", "cuda"):
         raise ValueError("device must be cpu or cuda")
     if precision not in ("fp32", "bf16", "fp16"):
@@ -87,6 +90,7 @@ def run_training(
         "device": device,
         "precision": precision,
         "build_sdf": build_sdf,
+        "collision_mode": collision_mode,
         "cil": cil,
         "tracking_uri": tracking_uri,
     }
@@ -202,6 +206,10 @@ def run_training(
                     raise ValueError(
                         "batch target horizon differs from the chosen recipe"
                     )
+                if collision_mode == "released" and "sdf" not in batch:
+                    raise ValueError(
+                        "released collision mode requires an sdf or --build-sdf"
+                    )
                 amp_dtype = torch.bfloat16 if precision == "bf16" else torch.float16
                 with torch.amp.autocast(
                     device_type=device, dtype=amp_dtype, enabled=precision != "fp32"
@@ -254,10 +262,14 @@ def run_training(
                             negative,
                             sdf=batch.get("sdf"),
                             contrast_valid=contrast_valid,
+                            collision_mode=collision_mode,
                         )
                     else:
                         components = supervised_objective(
-                            model(batch), batch, sdf=batch.get("sdf")
+                            model(batch),
+                            batch,
+                            sdf=batch.get("sdf"),
+                            collision_mode=collision_mode,
                         )
                 loss = components["total"]
                 if not torch.isfinite(loss):
@@ -354,6 +366,12 @@ def main():
     )
     parser.add_argument("--stop-after", type=int)
     parser.add_argument(
+        "--collision-mode",
+        choices=["educational", "released"],
+        default="educational",
+        help="choose the SDF collision loss; released requires an SDF",
+    )
+    parser.add_argument(
         "--cil",
         action="store_true",
         help="enable diagnostic synthetic contrastive training",
@@ -383,6 +401,7 @@ def main():
         args.device,
         args.precision,
         args.build_sdf,
+        args.collision_mode,
     )
 
 

@@ -140,7 +140,7 @@ code(
     "forward",
 )
 md(
-    "## Objectives and optimization\n\nThe toy imitation loss uses a supplied reference/mode label, Smooth L1 trajectory and prediction terms and classification. The paper also trains with collision/off-road and contrastive terms; the standalone utilities below are not wired into this toy training step. SDF lookup is differentiable bilinear interpolation.\n",
+    "## Objectives and optimization\n\nThe toy imitation loss uses a supplied reference/mode label, Smooth L1 trajectory and prediction terms and classification. The paper also trains with collision/off-road and contrastive terms; the standalone utilities below are not wired into this toy training step. SDF lookup is differentiable bilinear interpolation. The original educational loss averages sums per valid timestep. An optional released-style operator uses the official three-circle vehicle geometry, ignores circles outside a 95% map boundary or examples with an off-road center, and averages active circles. The training integration additionally masks unsupervised timesteps; map construction and the complete model still differ from the released code.\n",
     "objective",
     "loss",
     "Training signals and gradient flow",
@@ -153,6 +153,7 @@ md(
 loss_source = (
     (ROOT / "pluto/losses.py")
     .read_text()
+    .replace("import math\n", "")
     .replace("import torch\n", "")
     .replace("import torch.nn.functional as F\n", "")
 )
@@ -160,6 +161,10 @@ code(loss_source, "loss-definitions")
 code(
     "toy_sdf = torch.full((1, 5, 5), 0.7)\ntoy_trajectory = torch.tensor([[[0., 0., 1., 0.]]], requires_grad=True)\ntoy_penalty = sdf_loss(toy_trajectory, toy_sdf, resolution=1., offsets=(0.,), radius=1., margin=0.2)\nassert torch.allclose(toy_penalty, torch.tensor(0.5), atol=1e-6)\nprint('illustrative hinge (m):', toy_penalty.item())\n",
     "sdf-probe",
+)
+code(
+    "released_field = torch.full((1, 101, 101), 0.5)\nreleased_pose = torch.tensor([[[0., 0., 1., 0.]]], requires_grad=True)\nreleased_penalty = released_sdf_loss(released_pose, released_field)\nvehicle_radius = math.sqrt(2.297**2 + ((4.049 + 1.127) / 3)**2) / 2 - 0.2\nassert torch.allclose(released_penalty, torch.tensor((vehicle_radius - 0.5) * 3 / (3 + 1e-6)))\nprint('released-style active-circle average (m):', released_penalty.item())\n",
+    "released-sdf-probe",
 )
 md(
     "## Follow the gradient into an update\n\nFor a scalar prediction 0 and target 1, Smooth L1 is 0.5 and its derivative with respect to the prediction is −1. The full model has many coupled parameters; AdamW uses moving averages and weight decay. We import the shared optimizer helper as training infrastructure: it excludes biases, normalization weights and learned embeddings from decay, following the released trainer. Training also uses epoch-based warmup/cosine with a minimum learning rate of 1e-6. The illustrated scalar direction explains the gradient, not the size of an AdamW parameter update.\n",
@@ -192,7 +197,10 @@ md(
 objective_source = (
     (ROOT / "pluto/objective.py")
     .read_text()
-    .replace("from .losses import contrastive_loss, imitation_loss, sdf_loss\n", "")
+    .replace(
+        "from .losses import contrastive_loss, imitation_loss, released_sdf_loss, sdf_loss\n",
+        "",
+    )
     .replace("import torch\n", "")
 )
 code(objective_source, "objective-definitions")

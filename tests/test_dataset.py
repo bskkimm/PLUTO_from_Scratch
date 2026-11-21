@@ -155,6 +155,25 @@ def test_manifest_can_build_sdf_and_train_without_contrastive_views(tmp_path):
     b = torch.load(without_map, map_location="cpu", weights_only=False)
     assert a["config"]["build_sdf"] is True
     assert any(not torch.equal(a["model"][k], b["model"][k]) for k in a["model"])
+    released = run_training(
+        tmp_path / "released",
+        epochs=2,
+        stop_after=1,
+        manifest=manifest,
+        build_sdf=True,
+        collision_mode="released",
+    )
+    run_training(
+        tmp_path / "released",
+        epochs=2,
+        resume=True,
+        manifest=manifest,
+        build_sdf=True,
+        collision_mode="released",
+    )
+    state = torch.load(released, map_location="cpu", weights_only=False)
+    assert state["config"]["collision_mode"] == "released"
+    assert state["epoch"] == 2
 
 
 def test_manifest_cil_consumes_insertion_metadata(tmp_path):

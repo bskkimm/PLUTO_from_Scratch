@@ -36,6 +36,8 @@ Training defaults to `--device cpu --precision fp32`. `--precision bf16` is avai
 
 For `--build-sdf`, install the `science` extra and supply boolean `[B,H,W]` tensors named `drivable_mask` and `obstacle_mask` instead of `sdf` in each prepared batch. Distances use 0.2 m/pixel and cell-center Euclidean distance; rasterization and causal validity remain the caller’s responsibility.
 
+Add `--collision-mode released` to use the released PLUTO three-circle ESDF sampling, vehicle dimensions, 95% map boundary and active-circle normalization. It requires an `sdf` in every batch or `--build-sdf`; requesting it with no field fails. The training objectives additionally exclude invalid target steps and rows without a supervised plan, unlike the released operator. The default `educational` mode retains its previous per-timestep sum and out-of-bounds behavior. The mode is recorded in checkpoints and must match on resume; changing this implementation requires a new output directory for older checkpoints. Neither option validates the heuristic raster or reproduces official closed-loop evaluation.
+
 To prepare one local diagnostic window with route-filtered, heuristically connected references (requires `nuplan-map` extra):
 
 ```sh

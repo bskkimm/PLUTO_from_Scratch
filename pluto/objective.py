@@ -1,7 +1,7 @@
 """Contrastive imitation objective (paper Eq. 14) for prepared triplets."""
 
 import torch
-from .losses import contrastive_loss, imitation_loss, sdf_loss
+from .losses import contrastive_loss, imitation_loss, released_sdf_loss, sdf_loss
 
 
 def _supervised_trajectory(out, batch):
@@ -20,13 +20,23 @@ def _supervised_trajectory(out, batch):
     return chosen, valid & eligible[:, None]
 
 
-def supervised_objective(out, batch, sdf=None, resolution=0.2):
+def _collision_loss(trajectory, sdf, resolution, valid, collision_mode):
+    if collision_mode == "educational":
+        return sdf_loss(trajectory, sdf, resolution=resolution, valid=valid)
+    if collision_mode == "released":
+        return released_sdf_loss(trajectory, sdf, resolution=resolution, valid=valid)
+    raise ValueError("collision_mode must be educational or released")
+
+
+def supervised_objective(
+    out, batch, sdf=None, resolution=0.2, collision_mode="educational"
+):
     """Imitation, agent prediction, and an optional labeled-plan SDF penalty."""
     losses = imitation_loss(out, batch)
     auxiliary = losses["total"] * 0
     if sdf is not None:
         trajectory, valid = _supervised_trajectory(out, batch)
-        auxiliary = sdf_loss(trajectory, sdf, resolution=resolution, valid=valid)
+        auxiliary = _collision_loss(trajectory, sdf, resolution, valid, collision_mode)
     return {**losses, "auxiliary": auxiliary, "total": losses["total"] + auxiliary}
 
 
@@ -40,6 +50,7 @@ def contrastive_objective(
     resolution=0.2,
     temperature=0.1,
     contrast_valid=None,
+    collision_mode="educational",
 ):
     """Supervise original/positive; negative contributes only to Eq. 13.
 
@@ -69,8 +80,10 @@ def contrastive_objective(
         plus_traj, plus_mask = _supervised_trajectory(augmented, positive)
         plus_sdf = sdf if positive_sdf is None else positive_sdf
         auxiliary = (
-            sdf_loss(traj, sdf, resolution=resolution, valid=mask)
-            + sdf_loss(plus_traj, plus_sdf, resolution=resolution, valid=plus_mask)
+            _collision_loss(traj, sdf, resolution, mask, collision_mode)
+            + _collision_loss(
+                plus_traj, plus_sdf, resolution, plus_mask, collision_mode
+            )
         ) * 0.5
     return {
         "total": supervised + contrast + auxiliary,

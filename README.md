@@ -16,7 +16,10 @@ python -m pluto.evaluate runs/smoke/checkpoint.pt
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q -p no:cacheprovider tests
 ```
 
-Use a new output directory for each run, or add `--resume` to continue a compatible checkpoint.
+The evaluation command uses the same seeded synthetic batch as training. Its
+displacement error is a smoke-test diagnostic, not a measure of generalization
+or nuPlan planning performance. Use a new output directory for each run, or add
+`--resume` to continue a compatible checkpoint.
 
 ## Notebook and documentation
 

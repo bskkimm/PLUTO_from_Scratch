@@ -2,6 +2,8 @@
 
 An educational PyTorch implementation of [PLUTO](https://arxiv.org/abs/2404.14327v1), with a runnable CPU example and an illustrated teaching notebook.
 
+The implementation is compared with the [official PLUTO code at revision b9964b6](https://github.com/jchengai/pluto/tree/b9964b649c660f1f4a971d614c66f5992e24c18a).
+
 The implementation includes scene encoding, factorized trajectory decoding, imitation and contrastive losses, training checkpoints, and diagnostic evaluation. It remains incomplete: official nuPlan reproduction, pretrained-weight compatibility, full training, and GPU validation are unverified. Synthetic results are diagnostics.
 
 ## Quick start

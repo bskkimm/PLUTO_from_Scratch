@@ -11,7 +11,7 @@ The implementation includes scene encoding, factorized trajectory decoding, imit
 Use Python 3.10 or 3.11. The package pins PyTorch 2.9.1.
 
 ```sh
-python -m pip install -e '.[test]'
+python -m pip install -e '.[test,science,nuplan-map,tracking]'
 export OMP_NUM_THREADS=1
 python -m pluto.train --out runs/smoke --epochs 3
 python -m pluto.evaluate runs/smoke/checkpoint.pt

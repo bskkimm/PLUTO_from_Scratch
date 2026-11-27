@@ -9,6 +9,8 @@ The implementation includes scene encoding, factorized trajectory decoding, imit
 ## Quick start
 
 Use Python 3.10 or 3.11. The package pins PyTorch 2.9.1.
+The install command includes optional dependencies for the full test suite.
+For the synthetic training and evaluation example alone, `python -m pip install -e .` is sufficient.
 
 ```sh
 python -m pip install -e '.[test,science,nuplan-map,tracking]'

@@ -27,6 +27,10 @@ or nuPlan planning performance. Use a new output directory for each run, or add
 
 ## Notebook and documentation
 
+To run the walkthrough's code without Jupyter, from the repository root run
+`PYTHONPATH=. python scripts/run_notebook.py` after installing the package. It
+uses synthetic data and prints the results in the terminal.
+
 - [Illustrated walkthrough](notebooks/pluto_e2e_walkthrough.ipynb) — model definitions, worked examples, and 12 figures.
 - [Self-contained offline notebook](notebooks/pluto_e2e_walkthrough_offline.ipynb) — the same lesson with embedded images.
 - [Command guide](COMMAND_GUIDE.md) — training, evaluation, data preparation, and optional features.
